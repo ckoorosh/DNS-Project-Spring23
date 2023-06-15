@@ -53,7 +53,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'DNS_Server.urls'
+ROOT_URLCONF = 'MessangerServer.urls'
 
 TEMPLATES = [
     {
