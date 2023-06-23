@@ -14,6 +14,7 @@ def login(request):
         username = request.POST['username']
         password = request.POST['password']
 
+        # maybe use login() function from django.contrib.auth instead of this
         try:
             user = User.objects.get(username=username)
             password = hashlib.sha256(password.encode() + user.salt.encode()).hexdigest()
@@ -46,3 +47,35 @@ def register(request):
             return HttpResponse(content=response, content_type='application/json', status=201)
 
     return HttpResponse("User already exists.", status=409)
+
+
+@csrf_exempt
+def logout(request):
+    if request.method == 'POST':
+        return HttpResponse("Logged out.", status=200)
+
+    return HttpResponse("Invalid logout request.", status=400)
+
+
+@csrf_exempt
+def send_message(request):
+    if request.method == 'POST':
+        token = request.POST['token']
+        message = request.POST['message']
+        recipient = request.POST['recipient']
+        sender = jwt_decode(token)['username']
+
+        try:
+            recipient = User.objects.get(username=recipient)
+            sender = User.objects.get(username=sender)
+        except User.DoesNotExist:
+            return HttpResponse("Invalid recipient.", status=400)
+
+        if recipient == sender:
+            return HttpResponse("Cannot send message to self.", status=400)
+        
+        # todo send message to recipient
+        
+        return HttpResponse("Message sent.", status=200)
+    
+    return HttpResponse("Invalid message request.", status=400)
