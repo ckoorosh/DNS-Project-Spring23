@@ -1,4 +1,6 @@
 from django.db import models
+import hashlib
+import secrets
 
 
 class User(models.Model):
@@ -15,7 +17,7 @@ class User(models.Model):
 
     def set_password(self, password):
         self.salt = "todo"
-        self.password = "todo"
+        self.password = hashlib.sha256(password.encode() + self.salt.encode()).hexdigest()
 
 
 class GroupChat(models.Model):
