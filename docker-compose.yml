@@ -1,13 +1,27 @@
 version: '1'
 
 services:
+  db:
+    image: postgres:15.0-bullseye
+    container_name: chat-server-db
+    hostname: chat-server-db
+    restart: always
+    ports:
+      - "5678:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: kofner-5gyzry-paSzud
+      POSTGRES_DB: server_db
+    volumes:
+      - local_pgdata:/var/lib/postgresql/data
+
   redis:
     image: redis
     container_name: chat-server-redis
-    hostname: redis
+    hostname: chat-server-redis
     restart: always
     ports:
-      - "26000:6379"
+      - "6977:6379"
     networks:
       - internal_network
 
@@ -18,6 +32,10 @@ services:
       - "80:8000"
     networks:
       - internal_network
+
+
+volumes:
+  local_pgdata:
 
 networks:
   internal_network:
