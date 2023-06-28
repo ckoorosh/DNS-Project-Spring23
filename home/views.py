@@ -1,9 +1,8 @@
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
-from django.shortcuts import render
-from django.urls import path
+
+from MessangerServer.utlis import JwtUtil
 from .models import User
-from .utils import *
 import hashlib
 import json
 
@@ -19,7 +18,7 @@ def login(request):
             user = User.objects.get(username=username)
             password = hashlib.sha256(password.encode() + user.salt.encode()).hexdigest()
             if user.password == password:
-                token = jwt_encode({'username': username})
+                token = JwtUtil().jwt_encode({'username': username})
                 response = json.dumps({'token': token})
                 return HttpResponse(content=response, content_type='application/json', status=200)
         except User.DoesNotExist:
@@ -42,7 +41,7 @@ def register(request):
             user.set_password(password)
             user.set_pk_identifier()
             user.save()
-            token = jwt_encode({'username': username})
+            token = JwtUtil().jwt_encode({'username': username})
             response = json.dumps({'token': token})
             return HttpResponse(content=response, content_type='application/json', status=201)
 
@@ -63,7 +62,7 @@ def send_message(request):
         token = request.POST['token']
         message = request.POST['message']
         recipient = request.POST['recipient']
-        sender = jwt_decode(token)['username']
+        sender = JwtUtil().jwt_decode(token)['username']
 
         try:
             recipient = User.objects.get(username=recipient)
