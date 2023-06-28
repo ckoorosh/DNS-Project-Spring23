@@ -1,4 +1,4 @@
-version: '1'
+version: '2'
 
 services:
   db:
@@ -14,6 +14,8 @@ services:
       POSTGRES_DB: server_db
     volumes:
       - local_pgdata:/var/lib/postgresql/data
+    networks:
+      - internal_network
 
   redis:
     image: redis
