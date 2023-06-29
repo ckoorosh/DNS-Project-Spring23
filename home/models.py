@@ -19,8 +19,17 @@ class User(models.Model):
         self.password = hashlib.sha256(password.encode() + self.salt.encode()).hexdigest()
 
 
+class UserPublicKey(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    public_key = models.TextField()
+
+
 class GroupChat(models.Model):
     name = models.CharField(max_length=200)
+    identifier = models.CharField(max_length=200)
+
+    def set_identifier(self):
+        self.identifier = secrets.token_urlsafe(12)
 
 
 class GroupChatUser(models.Model):

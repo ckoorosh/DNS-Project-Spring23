@@ -16,6 +16,9 @@ class WebsocketManager(metaclass=Singleton):
 
     def get_connected_user_ids(self):
         return self.groups
+    
+    def is_user_online(self, user_id):
+        return str(user_id) in self.groups
 
     async def send_message_to_user(self, user_id, message):
         if str(user_id) not in self.groups:
