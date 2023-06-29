@@ -83,8 +83,11 @@ class Menu:
             print('Invalid group or message!')
         
 
-    def view_chat(self):
-        user = input('Enter user: ')
+    def view_chat(self, update=False):
+        if not update:
+            user = input('Enter user: ')
+        else:
+            user = self.user
         if user:
             success, messages = self.client.view_chat(user)
             if success:
@@ -125,8 +128,11 @@ class Menu:
         print('-----------------')
 
 
-    def view_group_chat(self):
-        group = input('Enter group: ')
+    def view_group_chat(self, update=False):
+        if not update:
+            group = input('Enter group: ')
+        else:
+            group = self.group
         if group:
             success, group_data = self.client.view_group_chat(group)
             if success:
@@ -139,7 +145,7 @@ class Menu:
                 self.group = group
                 return True
             else:
-                print('View chat failed!')
+                print('View group failed!')
                 return False
         else:
             print('Invalid group!')
@@ -196,12 +202,15 @@ class Menu:
 
     def chat(self):
         while True:
-            print('1. Send Chat Message')
+            print('1. Send Message')
+            print('2. View Messages')
             print('0. Back')
             choice = input('Enter choice: ')
             self.clear()
             if choice == '1':
                 self.send_chat_message()
+            elif choice == '2':
+                self.view_chat(update=True)
             elif choice == '0':
                 self.user = None
                 break
@@ -211,20 +220,23 @@ class Menu:
     
     def group_chat(self):
         while True:
-            print('1. Send Group Message')
-            print('2. Add Member to Group')
-            print('3. Remove Member from Group')
-            print('4. Make Member Admin')
+            print('1. Send Message')
+            print('2. View Messages')
+            print('3. Add Member to Group')
+            print('4. Remove Member from Group')
+            print('5. Make Member Admin')
             print('0. Back')
             choice = input('Enter choice: ')
             self.clear()
             if choice == '1':
                 self.send_group_message()
-            elif choice == '2':
-                self.add_member_to_group()
+            if choice == '2':
+                self.view_group_chat(update=True)
             elif choice == '3':
-                self.remove_member_from_group()
+                self.add_member_to_group()
             elif choice == '4':
+                self.remove_member_from_group()
+            elif choice == '5':
                 self.make_member_admin()
             elif choice == '0':
                 self.group = None
