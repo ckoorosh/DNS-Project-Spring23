@@ -9,4 +9,10 @@ urlpatterns = [
     path('register/', views.register, name='register'),
     path('logout/', views.logout, name='logout'),
     path('send_chat_message/', views.send_chat_message, name='send_chat_message'),
+    path('send_group_message/', views.send_group_message, name='send_group_message'),
+    path('create_group/', views.create_group, name='create_group'),
+    path('show_group_chats/', views.show_group_chats, name='show_group_chats'),
+    path('add_member_to_group/', views.add_member_to_group, name='add_member_to_group'),
+    path('remove_member_from_group/', views.remove_member_from_group, name='remove_member_from_group'),
+    path('make_member_admin/', views.make_member_admin, name='make_member_admin'),
 ]

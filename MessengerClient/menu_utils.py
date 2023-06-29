@@ -72,10 +72,9 @@ class Menu:
         
 
     def send_group_message(self):
-        group = input('Enter group: ')
         message = input('Enter message: ')
-        if group and message:
-            success = self.client.send_group_message(group, message)
+        if self.group and message:
+            success = self.client.send_group_message(self.group, message)
             if success:
                 print('Message sent!')
             else:
@@ -94,10 +93,14 @@ class Menu:
                 for message in messages:
                     print(f'{message["sender"]}: {message["message"]}')
                 print('----------------------')
+                self.user = user
+                return True
             else:
                 print('View chat failed!')
+                return False
         else:
             print('Invalid username!')
+            return False
 
 
     def view_online_users(self):
@@ -118,53 +121,145 @@ class Menu:
             return
         print('-- Group Chats --')
         for group in groups:
-            print(f'{group["name"]}: {group["last_message"]}')
+            print(f'{group["name"]} ({group["id"]}): {group["last_message"]}')
         print('-----------------')
 
 
     def view_group_chat(self):
         group = input('Enter group: ')
         if group:
-            success, messages = self.client.view_group_chat(group)
+            success, group_data = self.client.view_group_chat(group)
             if success:
                 self.clear()
-                print(f'Group {group}')
+                print(f'Group {group_data["name"] ({group})}')
                 print('----------------------')
-                for message in messages:
+                for message in group_data['messages']:
                     print(f'{message["sender"]}: {message["message"]}')
                 print('----------------------')
+                self.group = group
+                return True
             else:
                 print('View chat failed!')
+                return False
         else:
             print('Invalid group!')
-        
+            return False
+
+
+    def create_group(self):
+        group = input('Enter group name: ')
+        if group:
+            success = self.client.create_group(group)
+            if success:
+                print('Group created!')
+            else:
+                print('Create group failed!')
+        else:
+            print('Invalid group!')
+
+
+    def add_member_to_group(self):
+        member = input('Enter member: ')
+        if self.group and member:
+            success = self.client.add_member_to_group(self.group, member)
+            if success:
+                print('Member added!')
+            else:
+                print('Add member failed! Check if the member is online or if you are the group admin.')
+        else:
+            print('Invalid group or member!')
+
+
+    def remove_member_from_group(self):
+        member = input('Enter member: ')
+        if self.group and member:
+            success = self.client.remove_member_from_group(self.group, member)
+            if success:
+                print('Member removed!')
+            else:
+                print('Remove member failed! Check if the member is online or if you are the group admin.')
+        else:
+            print('Invalid group or member!')
+
+    
+    def make_member_admin(self):
+        member = input('Enter member: ')
+        if self.group and member:
+            success = self.client.make_member_admin(self.group, member)
+            if success:
+                print('Member made admin!')
+            else:
+                print('Make member admin failed! Check if you are the group admin.')
+        else:
+            print('Invalid group or member!')
+
 
     def chat(self):
+        while True:
+            print('1. Send Chat Message')
+            print('0. Back')
+            choice = input('Enter choice: ')
+            self.clear()
+            if choice == '1':
+                self.send_chat_message()
+            elif choice == '0':
+                self.user = None
+                break
+            else:
+                print('Invalid choice!')
+
+    
+    def group_chat(self):
+        while True:
+            print('1. Send Group Message')
+            print('2. Add Member to Group')
+            print('3. Remove Member from Group')
+            print('4. Make Member Admin')
+            print('0. Back')
+            choice = input('Enter choice: ')
+            self.clear()
+            if choice == '1':
+                self.send_group_message()
+            elif choice == '2':
+                self.add_member_to_group()
+            elif choice == '3':
+                self.remove_member_from_group()
+            elif choice == '4':
+                self.make_member_admin()
+            elif choice == '0':
+                self.group = None
+                break
+            else:
+                print('Invalid choice!')
+        
+
+    def main(self):
         while True:
             print('1. Show Chats')
             print('2. View Chat')
             print('3. View Online Users')
-            print('4. Send Chat Message')
-            print('5. Show Group Chats')
-            print('6. View Group Chat')
-            print('7. Send Group Message')
+            print('4. Show Group Chats')
+            print('5. View Group Chat')
+            print('6. Create Group')
             print('0. Logout')
             choice = input('Enter choice: ')
             self.clear()
             if choice == '1':
                 self.show_chats()
             if choice == '2':
-                self.view_chat()
+                success = self.view_chat()
+                if success:
+                    self.chat()
             elif choice == '3':
                 self.view_online_users()
             elif choice == '4':
-                self.send_chat_message()
-            elif choice == '5':
                 self.show_group_chats()
+            elif choice == '5':
+                success = self.view_group_chat()
+                if success:
+                    self.group_chat()
             elif choice == '6':
-                self.view_group_chat()
-            elif choice == '7':
-                self.send_group_message()
+                self.create_group()
             elif choice == '0':
                 success = self.client.logout()
                 if success:
@@ -186,11 +281,11 @@ class Menu:
             if choice == '1':
                 success = self.register()
                 if success:
-                    self.chat()
+                    self.main()
             elif choice == '2':
                 success = self.login()
                 if success:
-                    self.chat()
+                    self.main()
             elif choice == '3':
                 break
             else:
