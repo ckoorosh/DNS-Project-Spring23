@@ -1,0 +1,7 @@
+LOGIN = '/login/'
+REGISTER = '/register/'
+LOGOUT = '/logout/'
+SEND_MESSAGE = '/send_message/'
+SHOW_CHATS = '/show_chats/'
+VIEW_CHAT = '/view_chat/'
+VIEW_ONLINE_USERS = '/view_online_users/'

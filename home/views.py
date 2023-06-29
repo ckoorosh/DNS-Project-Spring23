@@ -32,7 +32,7 @@ def register(request):
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
-        public_key = request.POST['public_key']
+        public_key = request.POST.get(['public_key'], None)
 
         try:
             user = User.objects.get(username=username)
@@ -59,7 +59,7 @@ def logout(request):
 @csrf_exempt
 def send_message(request):
     if request.method == 'POST':
-        token = request.POST['token']
+        token = request.headers['Authorization'].split(' ')[1]
         message = request.POST['message']
         recipient = request.POST['recipient']
         sender = JwtUtil().jwt_decode(token)['username']

@@ -12,11 +12,10 @@ class User(models.Model):
     pk_identifier = models.CharField(max_length=200)
 
     def set_pk_identifier(self):
-        # sha256 of public key
-        self.pk_identifier = "todo"
+        self.pk_identifier = hashlib.sha256(self.public_key.encode()).hexdigest()
 
     def set_password(self, password):
-        self.salt = "todo"
+        self.salt = secrets.token_urlsafe(16)
         self.password = hashlib.sha256(password.encode() + self.salt.encode()).hexdigest()
 
 
