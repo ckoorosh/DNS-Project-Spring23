@@ -2,6 +2,7 @@ import os
 from threading import Lock
 
 import jwt
+from datetime import datetime, timezone, timedelta
 
 
 class Singleton(type):
@@ -21,7 +22,11 @@ class JwtUtil(metaclass=Singleton):
         self.secret = os.getenv('JWT_PASSWORD', 'pass')
 
     def jwt_encode(self, payload):
+        payload['exp'] = datetime.now(tz=timezone.utc) + timedelta(days=1)
         return jwt.encode(payload, self.secret, algorithm='HS256')
 
     def jwt_decode(self, token):
-        return jwt.decode(token, self.secret, algorithms=['HS256'])
+        try:
+            return jwt.decode(token, self.secret, algorithms=['HS256'])
+        except jwt.exceptions.ExpiredSignatureError:
+            return None

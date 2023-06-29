@@ -2,9 +2,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 
 from MessangerServer.utlis import JwtUtil
-from .models import User
+from .models import *
 import hashlib
 import json
+from MessangerServer.websocket_manager import WebsocketManager
 
 
 @csrf_exempt
@@ -57,7 +58,7 @@ def logout(request):
 
 
 @csrf_exempt
-def send_message(request):
+def send_chat_message(request):
     if request.method == 'POST':
         token = request.headers['Authorization'].split(' ')[1]
         message = request.POST['message']
@@ -73,8 +74,10 @@ def send_message(request):
         if recipient == sender:
             return HttpResponse("Cannot send message to self.", status=400)
         
-        # todo send message to recipient
-        
-        return HttpResponse("Message sent.", status=200)
-    
+        success = WebsocketManager().send_message(recipient.id, message)
+        if success:
+            return HttpResponse("Message sent.", status=200)
+        else:
+            return HttpResponse("Message not sent.", status=400)
+            
     return HttpResponse("Invalid message request.", status=400)

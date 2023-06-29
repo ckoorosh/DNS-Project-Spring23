@@ -86,6 +86,38 @@ class Client:
             return True
         else:
             return False
+        
+    def send_chat_message(self, recipient, message):
+        response = self.send_message(self.base_url + constants.SEND_CHAT_MESSAGE, {
+            "recipient": recipient,
+            "message": message,
+        })
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+        
+    def send_group_chat_message(self, group, message):
+        response = self.send_message(self.base_url + constants.SEND_GROUP_MESSAGE, {
+            "group": group,
+            "message": message,
+        })
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+        
+    def show_chats(self):
+        pass # todo: get chats from local
+        
+    def view_chat(self, user):
+        pass # todo: get chat history from local
+
+    def show_group_chats(self):
+        pass # todo: get group chats from local
+
+    def view_group_chat(self, group):
+        pass # todo: get group chat history from local
 
 
 if __name__ == '__main__':

@@ -1,9 +1,14 @@
 from getpass import getpass
+import os
 
 
 class Menu:
     def __init__(self, client):
         self.client = client
+
+
+    def clear(self):
+        os.system('cls' if os.name == 'nt' else 'clear')
 
 
     def item_text(self, base, value):
@@ -42,49 +47,142 @@ class Menu:
             return False
         
 
+    def show_chats(self):
+        chats = self.client.show_chats()
+        if not chats:
+            print('No chats yet. Start messaging!')
+            return
+        print('-- Chats --')
+        for chat in chats:
+            print(f'{chat["username"]}: {chat["last_message"]}')
+        print('----------')
+        
+    
+    def send_chat_message(self):
+        recipient = input('Enter recipient: ')
+        message = input('Enter message: ')
+        if recipient and message:
+            success = self.client.send_chat_message(recipient, message)
+            if success:
+                print('Message sent!')
+            else:
+                print('Send message failed!')
+        else:
+            print('Invalid recipient or message!')
+        
+
+    def send_group_message(self):
+        group = input('Enter group: ')
+        message = input('Enter message: ')
+        if group and message:
+            success = self.client.send_group_message(group, message)
+            if success:
+                print('Message sent!')
+            else:
+                print('Send message failed!')
+        else:
+            print('Invalid group or message!')
+        
+
+    def view_chat(self):
+        user = input('Enter user: ')
+        if user:
+            success, messages = self.client.view_chat(user)
+            if success:
+                self.clear()
+                print(f'--- {user} ---')
+                for message in messages:
+                    print(f'{message["sender"]}: {message["message"]}')
+                print('----------------------')
+            else:
+                print('View chat failed!')
+        else:
+            print('Invalid username!')
+
+
+    def view_online_users(self):
+        users = self.client.view_online_users()
+        if not users:
+            print('No online users!')
+            return
+        print('-- Online Users --')
+        for i, user in enumerate(users):
+            print(f'{i + 1}. {user}')
+        print('-----------------')
+
+
+    def show_group_chats(self):
+        groups = self.client.show_group_chats()
+        if not groups:
+            print('No group chats yet. Create a group!')
+            return
+        print('-- Group Chats --')
+        for group in groups:
+            print(f'{group["name"]}: {group["last_message"]}')
+        print('-----------------')
+
+
+    def view_group_chat(self):
+        group = input('Enter group: ')
+        if group:
+            success, messages = self.client.view_group_chat(group)
+            if success:
+                self.clear()
+                print(f'Group {group}')
+                print('----------------------')
+                for message in messages:
+                    print(f'{message["sender"]}: {message["message"]}')
+                print('----------------------')
+            else:
+                print('View chat failed!')
+        else:
+            print('Invalid group!')
+        
+
     def chat(self):
         while True:
             print('1. Show Chats')
-            print('2. View Online Users')
-            print('3. Logout')
+            print('2. View Chat')
+            print('3. View Online Users')
+            print('4. Send Chat Message')
+            print('5. Show Group Chats')
+            print('6. View Group Chat')
+            print('7. Send Group Message')
+            print('0. Logout')
             choice = input('Enter choice: ')
+            self.clear()
             if choice == '1':
-                pass
-            elif choice == '2':
-                pass
+                self.show_chats()
+            if choice == '2':
+                self.view_chat()
             elif choice == '3':
-                self.client.logout()
-                break
+                self.view_online_users()
+            elif choice == '4':
+                self.send_chat_message()
+            elif choice == '5':
+                self.show_group_chats()
+            elif choice == '6':
+                self.view_group_chat()
+            elif choice == '7':
+                self.send_group_message()
+            elif choice == '0':
+                success = self.client.logout()
+                if success:
+                    break
+                else:
+                    print('Logout failed!')
             else:
                 print('Invalid choice!')
             print()
 
 
     def show(self):
-        # self.menu = ConsoleMenu('Home')
-
-        # login_submenu = ConsoleMenu(title="Enter your credentials")
-        # username_item = FunctionItem("Username", self.login_handler, ['username'])
-        # password_item = FunctionItem("Password", self.login_handler, ['password'])
-        # login_item = FunctionItem("Login", self.client.login, [self.username, self.password])
-        # login_submenu.append_item(username_item)
-        # login_submenu.append_item(password_item)
-        # login_submenu.append_item(login_item)
-        # login_submenu_item = SubmenuItem("Login", submenu=login_submenu)
-        # login_submenu_item.set_menu(self.menu)
-        # # register_item = FunctionItem("Register", self.client.register)
-
-        # self.menu.append_item(login_submenu_item)
-        # # self.menu.append_item(register_item)
-
-        # self.menu.start()
-        # self.menu.join()
-
         while True:
             print('1. Register')
             print('2. Login')
             print('3. Exit')
             choice = input('Enter choice: ')
+            self.clear()
             if choice == '1':
                 success = self.register()
                 if success:
