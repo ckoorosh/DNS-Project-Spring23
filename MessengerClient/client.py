@@ -78,6 +78,14 @@ class Client:
             return True
         else:
             return False
+        
+    def logout(self):
+        response = self.send_message(self.base_url + constants.LOGOUT, {})
+        if response.status_code == 200:
+            self.token = None
+            return True
+        else:
+            return False
 
 
 if __name__ == '__main__':

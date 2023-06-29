@@ -45,12 +45,14 @@ class Menu:
     def chat(self):
         while True:
             print('1. Show Chats')
-            print('1. View Online Users')
-            print('2. Logout')
+            print('2. View Online Users')
+            print('3. Logout')
             choice = input('Enter choice: ')
             if choice == '1':
                 pass
             elif choice == '2':
+                pass
+            elif choice == '3':
                 self.client.logout()
                 break
             else:
