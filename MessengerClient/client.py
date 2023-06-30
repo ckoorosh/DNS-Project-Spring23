@@ -47,12 +47,14 @@ class Client:
     def decrypt_message(self, message):
         return message.decode()
 
-    def register(self, username, password):
+    def register(self, name, username, password):
+        self.name = name
         self.username = username
         self.password = password
         # todo: generate public/private key pair
         self.public_key = secrets.token_urlsafe(16)
         response = self.send_message(self.base_url + constants.REGISTER, {
+            "name": self.name,
             "username": self.username,
             "password": self.password,
             "public_key": self.public_key,

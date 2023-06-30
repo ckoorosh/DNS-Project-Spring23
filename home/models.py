@@ -1,6 +1,7 @@
 from django.db import models
 import hashlib
 import secrets
+import uuid
 
 
 class User(models.Model):
@@ -26,10 +27,7 @@ class UserPublicKey(models.Model):
 
 class GroupChat(models.Model):
     name = models.CharField(max_length=200)
-    identifier = models.CharField(max_length=200)
-
-    def set_identifier(self):
-        self.identifier = secrets.token_urlsafe(12)
+    identifier = models.UUIDField(default=uuid.uuid4, unique=True)
 
 
 class GroupChatUser(models.Model):
