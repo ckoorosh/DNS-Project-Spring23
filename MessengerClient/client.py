@@ -38,7 +38,7 @@ class Client:
             headers['Authorization'] = f'Bearer {self.token}'
         self.logger.debug(f'Sending message to {url} and message {message}')
         response = requests.post(url, data=message, headers=headers)
-        self.logger.debug(f'Received response {response.json()}')
+        self.logger.debug(f'Received response {response.content}')
         return response
 
     def encrypt_message(self, message):
@@ -139,7 +139,7 @@ class Client:
             groups_data = []
             for group in groups:
                 group_last_message = '' # todo: get last message from local
-                groups_data.append(group['name'], group['id'], group_last_message)
+                groups_data.append({'name': group['name'], 'id': group['id'], 'last_message': group_last_message})
             return groups_data
         else:
             return None

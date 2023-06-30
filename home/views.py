@@ -134,7 +134,7 @@ def send_group_message(request):
 def create_group(request):
     if request.method == 'POST':
         token = request.headers['Authorization'].split(' ')[1]
-        group_name = request.POST['group_name']
+        group_name = request.POST['name']
 
         try:
             creator = User.objects.get(username=JwtUtil().jwt_decode(token)['username'])
@@ -142,10 +142,11 @@ def create_group(request):
             return HttpResponse("Invalid group request.", status=400)
 
         group = GroupChat(name=group_name)
+        group.set_identifier()
         group.save()
         group_user = GroupChatUser(user=creator, group=group, role='admin')
         group_user.save()
-        return HttpResponse("Group created.", status=200)
+        return HttpResponse("Group created.", status=201)
 
     return HttpResponse("Invalid group request.", status=400)
 
