@@ -38,7 +38,7 @@ class Client:
             headers['Authorization'] = f'Bearer {self.token}'
         self.logger.debug(f'Sending message to {url} and message {message}')
         response = requests.post(url, data=message, headers=headers)
-        self.logger.debug(f'Received response {response.content}')
+        self.logger.debug(f'Received response {response.text}')
         return response
 
     def encrypt_message(self, message):
