@@ -29,7 +29,7 @@ class GroupChat(models.Model):
     identifier = models.CharField(max_length=200)
 
     def set_identifier(self):
-        self.identifier = secrets.token_urlsafe(12)
+        self.identifier = secrets.token_urlsafe(16)
 
 
 class GroupChatUser(models.Model):

@@ -38,7 +38,7 @@ class Client:
             headers['Authorization'] = f'Bearer {self.token}'
         self.logger.debug(f'Sending message to {url} and message {message}')
         response = requests.post(url, data=message, headers=headers)
-        self.logger.debug(f'Received response {response.json()}')
+        self.logger.debug(f'Received response {response.content}')
         return response
 
     def encrypt_message(self, message):
@@ -47,12 +47,14 @@ class Client:
     def decrypt_message(self, message):
         return message.decode()
 
-    def register(self, username, password):
+    def register(self, name, username, password):
+        self.name = name
         self.username = username
         self.password = password
         # todo: generate public/private key pair
         self.public_key = secrets.token_urlsafe(16)
         response = self.send_message(self.base_url + constants.REGISTER, {
+            "name": self.name,
             "username": self.username,
             "password": self.password,
             "public_key": self.public_key,
@@ -137,7 +139,7 @@ class Client:
             groups_data = []
             for group in groups:
                 group_last_message = '' # todo: get last message from local
-                groups_data.append(group['name'], group['id'], group_last_message)
+                groups_data.append({'name': group['name'], 'id': group['id'], 'last_message': group_last_message})
             return groups_data
         else:
             return None

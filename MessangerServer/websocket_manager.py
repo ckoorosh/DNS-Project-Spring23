@@ -15,7 +15,7 @@ class WebsocketManager(metaclass=Singleton):
         self.groups.remove(group_id)
 
     def get_connected_user_ids(self):
-        return self.groups
+        return list(self.groups)
     
     def is_user_online(self, user_id):
         return str(user_id) in self.groups

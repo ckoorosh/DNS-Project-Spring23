@@ -31,14 +31,15 @@ def login(request):
 @csrf_exempt
 def register(request):
     if request.method == 'POST':
+        name = request.POST['name']
         username = request.POST['username']
         password = request.POST['password']
-        public_key = request.POST.get(['public_key'], None)
+        public_key = request.POST.get('public_key', None)
 
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            user = User(username=username, public_key=public_key)
+            user = User(username=username, public_key=public_key, name=name)
             user.set_password(password)
             user.set_pk_identifier()
             user.save()
@@ -55,6 +56,29 @@ def logout(request):
         return HttpResponse("Logged out.", status=200)
 
     return HttpResponse("Invalid logout request.", status=400)
+
+
+@csrf_exempt
+def view_online_users(request):
+    if request.method == 'POST':
+        token = request.headers['Authorization'].split(' ')[1]
+        username = JwtUtil().jwt_decode(token)['username']
+        try:
+            user = User.objects.get(username=username)
+            online_users = WebsocketManager().get_connected_user_ids()
+            online_users.remove(user.id)
+            response = []
+            for online_user in online_users:
+                user_data = {'username': User.objects.get(id=online_user).username,
+                             'name': User.objects.get(id=online_user).name
+                            }
+                response.append(user_data)
+            response = json.dumps(response)
+            return HttpResponse(content=response, content_type='application/json', status=200)
+        except User.DoesNotExist:
+            return HttpResponse("Invalid user.", status=400)
+
+    return HttpResponse("Invalid online users request.", status=400)
 
 
 @csrf_exempt
@@ -110,7 +134,7 @@ def send_group_message(request):
 def create_group(request):
     if request.method == 'POST':
         token = request.headers['Authorization'].split(' ')[1]
-        group_name = request.POST['group_name']
+        group_name = request.POST['name']
 
         try:
             creator = User.objects.get(username=JwtUtil().jwt_decode(token)['username'])
@@ -122,7 +146,7 @@ def create_group(request):
         group.save()
         group_user = GroupChatUser(user=creator, group=group, role='admin')
         group_user.save()
-        return HttpResponse("Group created.", status=200)
+        return HttpResponse("Group created.", status=201)
 
     return HttpResponse("Invalid group request.", status=400)
 

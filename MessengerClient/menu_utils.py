@@ -33,10 +33,11 @@ class Menu:
         
 
     def register(self):
+        name = input('Enter your name: ')
         username = input('Enter username: ')
         password = getpass('Enter password: ')
-        if username and password:
-            success = self.client.register(username, password)
+        if name and username and password:
+            success = self.client.register(name, username, password)
             if success:
                 return True
             else:
@@ -113,7 +114,7 @@ class Menu:
             return
         print('-- Online Users --')
         for i, user in enumerate(users):
-            print(f'{i + 1}. {user}')
+            print(f'{i + 1}. {user["name"] ({user["username"]})}')
         print('-----------------')
 
 
