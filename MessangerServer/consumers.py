@@ -30,7 +30,6 @@ class WSConsumer(AsyncWebsocketConsumer):
         WebsocketManager().remove_group(self.user_id)
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):
-        await self.disconnect(close_code=111)
         pass
 
     async def send_message(self, message):

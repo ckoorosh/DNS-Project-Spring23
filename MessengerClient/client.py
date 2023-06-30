@@ -63,7 +63,7 @@ class Client:
         if response.status_code == 201:
             self.token = response.json()['token']
             self.ws = websocket.WebSocket()
-            self.ws.connect(f'{self.ws_url}/{self.username}/', cookie='authCookie=jwt')
+            self.ws.connect(f'{self.ws_url}/{self.username}/', cookie=f'authCookie={self.token}')
             return True
         else:
             return False
