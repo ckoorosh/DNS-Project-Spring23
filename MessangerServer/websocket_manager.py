@@ -18,16 +18,16 @@ class WebsocketManager(metaclass=Singleton):
         return list(self.groups)
     
     def is_user_online(self, username):
-        return str(username) in self.groups
+        return username in self.groups
 
     async def send_message_to_user(self, username, message):
-        if not self.is_user_online(username):
+        if username not in self.groups:
             return False
 
         channel_layer = get_channel_layer()
 
         await channel_layer.group_send(
-            str(username),
+            username,
             {
                 'type': 'send_message',
                 'message': message,

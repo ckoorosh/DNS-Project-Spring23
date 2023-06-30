@@ -66,12 +66,12 @@ def view_online_users(request):
         try:
             user = User.objects.get(username=username)
             online_users = WebsocketManager().get_connected_user_ids()
-            online_users.remove(user.id)
+            online_users.remove(user.username)
             response = []
-            for online_user in online_users:
-                user_data = {'username': User.objects.get(id=online_user).username,
-                             'name': User.objects.get(id=online_user).name
-                            }
+            for online_username in online_users:
+                online_user = User.objects.get(username=online_username)
+                user_data = {'username': online_user.username,
+                             'name': online_user.name}
                 response.append(user_data)
             response = json.dumps(response)
             return HttpResponse(content=response, content_type='application/json', status=200)
@@ -98,7 +98,7 @@ def send_chat_message(request):
         if recipient == sender:
             return HttpResponse("Cannot send message to self.", status=400)
         
-        success = WebsocketManager().send_message(recipient.id, message)
+        success = WebsocketManager().send_message(recipient.username, message)
         if success:
             return HttpResponse("Message sent.", status=200)
         else:
@@ -125,7 +125,7 @@ def send_group_message(request):
         for group_user in group_chat_users:
             if group_user.user == sender:
                 continue
-            WebsocketManager().send_message_to_user(group_user.id, message)
+            WebsocketManager().send_message_to_user(group_user.user.username, message)
 
     return HttpResponse("Invalid message request.", status=400)
 
@@ -191,7 +191,7 @@ def add_member_to_group(request):
         if group_user.role != 'admin':
             return HttpResponse("User is not admin.", status=400)
         
-        if not WebsocketManager().is_user_online(member.id):
+        if not WebsocketManager().is_user_online(member.username):
             return HttpResponse("User is not online.", status=400)
 
         if GroupChatUser.objects.filter(user=member, group=group).exists():

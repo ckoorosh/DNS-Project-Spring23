@@ -1,12 +1,13 @@
 # client app using rest api to communicate with server
 
 import requests
-import json
-import hashlib
 import secrets
 import constants
 from menu_utils import Menu
 import logging
+import websocket
+import json
+import threading
 
 
 class Client:
@@ -22,6 +23,7 @@ class Client:
         self.server_ip = '127.0.0.1'
         self.server_port = 80
         self.base_url = f'http://{self.server_ip}:{self.server_port}'
+        self.ws_url = f'ws://{self.server_ip}:{self.server_port}/ws'
 
         self.menu = Menu(self)
 
@@ -38,8 +40,26 @@ class Client:
             headers['Authorization'] = f'Bearer {self.token}'
         self.logger.debug(f'Sending message to {url} and message {message}')
         response = requests.post(url, data=message, headers=headers)
-        self.logger.debug(f'Received response {response.content}')
+        self.logger.debug(f'Received response {response.text}')
         return response
+
+    def on_message(self, ws, message):
+        if type(message) == bytes:
+            return
+        data = json.loads(message)
+        if 'type' in data and data['type'] == 'ping':
+            ws.send(json.dumps({'type': 'pong'}))
+        else:
+            self.logger.info(f'Received WS message {message}')
+
+    def on_error(self, ws, error):
+        self.logger.error(error)        
+
+    def on_close(self, ws):
+        self.logger.info("WebSocket closed")
+
+    def on_open(self, ws):
+        self.logger.info("WebSocket opened")
 
     def encrypt_message(self, message):
         return message.encode()
@@ -62,9 +82,21 @@ class Client:
 
         if response.status_code == 201:
             self.token = response.json()['token']
+            self.connect_ws()
             return True
         else:
             return False
+        
+    def connect_ws(self):
+        self.ws = websocket.WebSocketApp(f'{self.ws_url}/{self.username}/',
+                                         cookie=f'authCookie={self.token}',
+                                         on_message=self.on_message,
+                                         on_error=self.on_error,
+                                         on_close=self.on_close,
+                                         on_open=self.on_open)
+        wst = threading.Thread(target=self.ws.run_forever)
+        wst.daemon = True
+        wst.start()
 
     def login(self, username, password):
         self.username = username
@@ -77,18 +109,20 @@ class Client:
 
         if response.status_code == 200:
             self.token = response.json()['token']
+            self.connect_ws()
             return True
         else:
             return False
-        
+
     def logout(self):
         response = self.send_message(self.base_url + constants.LOGOUT, {})
         if response.status_code == 200:
             self.token = None
+            self.ws.close()
             return True
         else:
             return False
-        
+
     def send_chat_message(self, recipient, message):
         response = self.send_message(self.base_url + constants.SEND_CHAT_MESSAGE, {
             "recipient": recipient,
@@ -98,7 +132,7 @@ class Client:
             return True
         else:
             return False
-        
+
     def send_group_chat_message(self, group, message):
         response = self.send_message(self.base_url + constants.SEND_GROUP_MESSAGE, {
             "group": group,
@@ -108,20 +142,21 @@ class Client:
             return True
         else:
             return False
-        
+
     def view_online_users(self):
-        response = self.send_message(self.base_url + constants.VIEW_ONLINE_USERS, {})
+        response = self.send_message(
+            self.base_url + constants.VIEW_ONLINE_USERS, {})
         if response.status_code == 200:
             users = response.json()
             return users
         else:
             return None
-        
+
     def show_chats(self):
-        pass # todo: get chats from local
-        
+        pass  # todo: get chats from local
+
     def view_chat(self, user):
-        pass # todo: get chat history from local
+        pass  # todo: get chat history from local
 
     def create_group(self, name):
         response = self.send_message(self.base_url + constants.CREATE_GROUP, {
@@ -133,19 +168,22 @@ class Client:
             return False
 
     def show_group_chats(self):
-        response = self.send_message(self.base_url + constants.SHOW_GROUP_CHATS, {})
+        response = self.send_message(
+            self.base_url + constants.SHOW_GROUP_CHATS, {})
         if response.status_code == 200:
             groups = response.json()
             groups_data = []
             for group in groups:
-                group_last_message = '' # todo: get last message from local
-                groups_data.append({'name': group['name'], 'id': group['id'], 'last_message': group_last_message})
+                group_last_message = ''  # todo: get last message from local
+                groups_data.append({'name': group['name'], 
+                                    'id': group['id'], 
+                                    'last_message': group_last_message})
             return groups_data
         else:
             return None
 
     def view_group_chat(self, group):
-        pass # todo: get group chat history from local
+        pass  # todo: get group chat history from local
 
     def add_member_to_group(self, group, user):
         response = self.send_message(self.base_url + constants.ADD_MEMBER_TO_GROUP, {
@@ -156,7 +194,7 @@ class Client:
             return True
         else:
             return False
-        
+
     def remove_member_from_group(self, group, user):
         response = self.send_message(self.base_url + constants.REMOVE_MEMBER_FROM_GROUP, {
             "group": group,
@@ -166,7 +204,7 @@ class Client:
             return True
         else:
             return False
-        
+
     def make_member_admin(self, group, user):
         response = self.send_message(self.base_url + constants.MAKE_MEMBER_ADMIN, {
             "group": group,
