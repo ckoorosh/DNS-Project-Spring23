@@ -1,12 +1,11 @@
 # client app using rest api to communicate with server
 
 import requests
-import json
-import hashlib
 import secrets
 import constants
 from menu_utils import Menu
 import logging
+import websocket
 
 
 class Client:
@@ -22,6 +21,7 @@ class Client:
         self.server_ip = '127.0.0.1'
         self.server_port = 80
         self.base_url = f'http://{self.server_ip}:{self.server_port}'
+        self.ws_url = f'ws://{self.server_ip}:{self.server_port}/ws'
 
         self.menu = Menu(self)
 
@@ -62,6 +62,8 @@ class Client:
 
         if response.status_code == 201:
             self.token = response.json()['token']
+            self.ws = websocket.WebSocket()
+            self.ws.connect(f'{self.ws_url}/{self.username}/', cookie='authCookie=jwt')
             return True
         else:
             return False
@@ -77,6 +79,8 @@ class Client:
 
         if response.status_code == 200:
             self.token = response.json()['token']
+            self.ws = websocket.WebSocket()
+            self.ws.connect(f'{self.ws_url}/{self.username}/', cookie=f'authCookie={self.token}')
             return True
         else:
             return False
@@ -85,6 +89,7 @@ class Client:
         response = self.send_message(self.base_url + constants.LOGOUT, {})
         if response.status_code == 200:
             self.token = None
+            self.ws.close()
             return True
         else:
             return False

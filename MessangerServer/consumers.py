@@ -17,7 +17,7 @@ class WSConsumer(AsyncWebsocketConsumer):
         token = self.scope['cookies'][cookie_name]
         user_id = self.scope['url_route']['kwargs']['user_id']
         decoded_token = JwtUtil().jwt_decode(token)
-        if decoded_token['user_id'] != user_id:
+        if decoded_token['username'] != user_id:
             raise Exception('Unauthorized user')
         self.user_id = user_id
         self.token = token

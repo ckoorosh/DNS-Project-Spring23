@@ -109,11 +109,13 @@ class Menu:
 
     def view_online_users(self):
         users = self.client.view_online_users()
+        print(users)
         if not users:
             print('No online users!')
             return
         print('-- Online Users --')
         for i, user in enumerate(users):
+            print(user)
             print(f'{i + 1}. {user["name"] ({user["username"]})}')
         print('-----------------')
 
