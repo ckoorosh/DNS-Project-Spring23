@@ -79,4 +79,4 @@ class SessionHandler(metaclass=Singleton):
         if content_type is None:
             return HttpResponse(content=json.dumps(encrypted), status=status)
         else:
-            return HttpResponse(content=encrypted, status=status, content_type=content_type)
+            return HttpResponse(content=json.dumps(encrypted), status=status, content_type=content_type)
