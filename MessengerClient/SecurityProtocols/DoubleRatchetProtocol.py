@@ -97,7 +97,7 @@ class DoubleRatchetEncoder(json.JSONEncoder):
             my_dh = json.dumps(obj.my_dh, cls=ECDiffieHellmanEncoder)
             sym_keys = obj.get_sym_keys()
 
-            return {'rks': rks, 'me': obj.me,'receiver_pub':obj.receiver_pub, 'my_dh': my_dh, 'sym_keys': sym_keys}
+            return {'rks': rks, 'me': obj.me,'receiver_pub': obj.receiver_pub, 'my_dh': my_dh, 'sym_keys': sym_keys}
         return super().default(obj)
 
 
