@@ -189,13 +189,13 @@ class Client:
     def view_chat(self, user):
         chats = self.show_chats()
         if user in chats:
-            messages = self.security_service.load_chat(user)
+            messages = self.security_service.load_chat(user, self.password)
             return True, messages
         else:
             return False, None
     
     def save_chat(self, user, messages):
-        self.security_service.save_chat(user, messages)
+        self.security_service.save_chat(user, self.password, messages)
 
     def create_group(self, name):
         content, response = self.send_message(self.base_url + constants.CREATE_GROUP, {
