@@ -26,10 +26,11 @@ class Session:
 
 class SessionHandler(metaclass=Singleton):
     def __init__(self, server_rsa: RSA = None):
+        # pass
         self.sessions = {}
         self.last_update = time.time()
-        if server_rsa is None:
-            raise Exception('Wrong input.')
+        # if server_rsa is None:
+        #     raise Exception('Wrong input.')
         self.rsa = server_rsa
 
     def add_session(self, session: Session):

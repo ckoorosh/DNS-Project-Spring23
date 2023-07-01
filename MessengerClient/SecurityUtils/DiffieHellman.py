@@ -1,3 +1,5 @@
+import json
+
 import cryptography
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -39,6 +41,13 @@ class ECDiffieHellman:
         )
         return pk_bytes.decode('utf-8')
 
+    def get_my_private(self) -> str:
+        pk_bytes = self.private_key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption()
+        )
+        return pk_bytes.decode('utf-8')
 
     def get_peer_pub(self) -> str:
         pub_bytes = self.peer_pub.public_bytes(
@@ -76,3 +85,25 @@ class ECDiffieHellman:
             return True
         except cryptography.exceptions.InvalidSignature:
             return False
+
+
+class ECDiffieHellmanEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, ECDiffieHellman):
+            private = None if obj.private_key is None else obj.get_my_private()
+            peer_pub = None if obj.peer_pub is None else obj.get_peer_pub()
+            return {'private': private, 'peer_pub': peer_pub}
+        return super().default(obj)
+
+
+class ECDiffieHellmanDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        super().__init__(object_hook=self.object_hook, *args, **kwargs)
+
+    def object_hook(self, dct):
+        dh = ECDiffieHellman()
+        if dct.get('private'):
+            dh.set_private_pub(dct['private'])
+        if dct.get('peer_pub'):
+            dh.set_peer_pub(dct['peer_pub'])
+        return dh

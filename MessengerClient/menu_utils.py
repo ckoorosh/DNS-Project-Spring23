@@ -1,21 +1,18 @@
-from getpass import getpass
 import os
+from getpass import getpass
 
 
 class Menu:
     def __init__(self, client):
         self.client = client
 
-
     def clear(self):
         os.system('cls' if os.name == 'nt' else 'clear')
-
 
     def item_text(self, base, value):
         if value:
             return f'{base}: {self.username}'
         return base
-    
 
     def login(self):
         username = input('Enter username: ')
@@ -30,7 +27,6 @@ class Menu:
         else:
             print('Invalid username or password!')
             return False
-        
 
     def register(self):
         name = input('Enter your name: ')
@@ -46,7 +42,6 @@ class Menu:
         else:
             print('Invalid username or password!')
             return False
-        
 
     def show_chats(self):
         chats = self.client.show_chats()
@@ -57,20 +52,27 @@ class Menu:
         for chat in chats:
             print(f'{chat["username"]}: {chat["last_message"]}')
         print('----------')
-        
-    
+
     def send_chat_message(self):
         recipient = input('Enter recipient: ')
         message = input('Enter message: ')
-        if recipient and message:
-            success = self.client.send_chat_message(recipient, message)
-            if success:
-                print('Message sent!')
-            else:
-                print('Send message failed!')
-        else:
-            print('Invalid recipient or message!')
-        
+        if not self.client.security_service.does_have_key(recipient):
+            content, _ = self.client.send_message(
+                self.client.base_url + '/sec/user_bundle_key/',
+                {'username': recipient}
+            )
+            self.client.security_service.exchange_key(content, recipient, self.client.token)
+
+        self.client.security_service.send_message_to_user(recipient,message,self.client.token)
+
+        # if recipient and message:
+        #     success = self.client.send_chat_message(recipient, message)
+        #     if success:
+        #         print('Message sent!')
+        #     else:
+        #         print('Send message failed!')
+        # else:
+        #     print('Invalid recipient or message!')
 
     def send_group_message(self):
         message = input('Enter message: ')
@@ -82,7 +84,6 @@ class Menu:
                 print('Send message failed!')
         else:
             print('Invalid group or message!')
-        
 
     def view_chat(self, update=False):
         if not update:
@@ -106,7 +107,6 @@ class Menu:
             print('Invalid username!')
             return False
 
-
     def view_online_users(self):
         users = self.client.view_online_users()
         if not users:
@@ -116,7 +116,6 @@ class Menu:
         for i, user in enumerate(users):
             print(f'{i + 1}. {user["name"]} ({user["username"]})')
         print('-----------------')
-
 
     def show_group_chats(self):
         groups = self.client.show_group_chats()
@@ -128,7 +127,6 @@ class Menu:
             print(f'{group["name"]} ({group["id"]}): {group["last_message"]}')
         print('-----------------')
 
-
     def view_group_chat(self, update=False):
         if not update:
             group = input('Enter group: ')
@@ -138,7 +136,7 @@ class Menu:
             success, group_data = self.client.view_group_chat(group)
             if success:
                 self.clear()
-                print(f'Group {group_data["name"] ({group})}')
+                print(f'Group {group_data["name"]({group})}')
                 print('----------------------')
                 for message in group_data['messages']:
                     print(f'{message["sender"]}: {message["message"]}')
@@ -152,7 +150,6 @@ class Menu:
             print('Invalid group!')
             return False
 
-
     def create_group(self):
         group = input('Enter group name: ')
         if group:
@@ -163,7 +160,6 @@ class Menu:
                 print('Create group failed!')
         else:
             print('Invalid group!')
-
 
     def add_member_to_group(self):
         member = input('Enter member: ')
@@ -176,7 +172,6 @@ class Menu:
         else:
             print('Invalid group or member!')
 
-
     def remove_member_from_group(self):
         member = input('Enter member: ')
         if self.group and member:
@@ -188,7 +183,6 @@ class Menu:
         else:
             print('Invalid group or member!')
 
-    
     def make_member_admin(self):
         member = input('Enter member: ')
         if self.group and member:
@@ -199,7 +193,6 @@ class Menu:
                 print('Make member admin failed! Check if you are the group admin.')
         else:
             print('Invalid group or member!')
-
 
     def chat(self):
         while True:
@@ -218,7 +211,6 @@ class Menu:
             else:
                 print('Invalid choice!')
 
-    
     def group_chat(self):
         while True:
             print('1. Send Message')
@@ -244,7 +236,6 @@ class Menu:
                 break
             else:
                 print('Invalid choice!')
-        
 
     def main(self):
         while True:
@@ -282,7 +273,6 @@ class Menu:
             else:
                 print('Invalid choice!')
             print()
-
 
     def show(self):
         while True:
