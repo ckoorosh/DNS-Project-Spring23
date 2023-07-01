@@ -4,8 +4,8 @@ from typing import Tuple, List
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-from MessangerServer.SecurityUtils.ChaCha import ChaCha20Poly1305
-from MessangerServer.SecurityUtils.DiffieHellman import ECDiffieHellman
+from SecurityUtils.ChaCha import ChaCha20Poly1305
+from SecurityUtils.DiffieHellman import ECDiffieHellman
 
 
 class TripleDHProtocol:

@@ -4,10 +4,11 @@ import random
 import time
 from typing import Tuple
 
-from cryptography.hazmat.primitives import hashes
-
+from MessangerServer.SecurityUtils.ChaCha import ChaCha20Poly1305
 from MessangerServer.SecurityUtils.DiffieHellman import ECDiffieHellman
 from MessangerServer.SecurityUtils.RSA import RSA
+from MessangerServer.utlis import b64_to_bytes
+from cryptography.hazmat.primitives import hashes
 
 
 class RSAWithDHProtocol:
@@ -32,8 +33,16 @@ class RSAWithDHProtocol:
         encrypted_message = self.server_rsa.encrypt(message_to_encrypt)
         return encrypted_message, self.eval_hash(message_to_encrypt)
 
-    def server_phase1(self, encrypted_message: bytes, message_hash: str) -> Tuple[str, bytes]:
-        decrypted_message = self.server_rsa.decrypt(encrypted_message)
+    def server_phase1(
+            self,
+            encrypted_message: bytes,
+            encrypted_key: bytes,
+            message_hash: str
+    ) -> Tuple[str, bytes]:
+        keys = self.server_rsa.decrypt(encrypted_key)
+        keys_dict = json.loads(keys)
+        chacha = ChaCha20Poly1305(b64_to_bytes(keys_dict.get('key')))
+        decrypted_message = chacha.decrypt(b64_to_bytes(keys_dict['nonce']), encrypted_message)
         if self.eval_hash(decrypted_message) != message_hash:
             raise Exception('Integrity Error!!')
         decrypted_message_dict = json.loads(decrypted_message)

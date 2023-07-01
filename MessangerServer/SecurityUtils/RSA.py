@@ -1,8 +1,12 @@
+import json
+from typing import Tuple
+
 import cryptography
+from MessangerServer.SecurityUtils.ChaCha import ChaCha20Poly1305
+from MessangerServer.utlis import bytes_to_b64
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric import rsa
-
 
 
 class RSA:
@@ -21,14 +25,14 @@ class RSA:
         return self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
+        ).decode('utf-8')
 
     def get_private(self) -> str:
         return self.private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption()
-        )
+        ).decode('utf-8')
 
     def set_private_pub(self, private: str):
         private_key_bytes = bytes(private, 'utf-8')
@@ -68,16 +72,22 @@ class RSA:
         except cryptography.exceptions.InvalidSignature:
             return False
 
-    def encrypt(self, message: str) -> bytes:
-        message_bytes = bytes(message, 'utf-8')
+    def encrypt(self, message: str) -> Tuple[bytes, bytes]:
+        chacha = ChaCha20Poly1305()
+        nonce, encrypted_message = chacha.encrypt(message)
+        keys = {
+            'nonce': bytes_to_b64(nonce),
+            'key': bytes_to_b64(chacha.key)
+        }
+        keys_byte = bytes(json.dumps(keys), 'utf-8')
         return self.public_key.encrypt(
-            message_bytes,
+            keys_byte,
             padding.OAEP(
                 mgf=padding.MGF1(algorithm=hashes.SHA256()),
                 algorithm=hashes.SHA256(),
                 label=None
             )
-        )
+        ), encrypted_message
 
     def decrypt(self, ciphertext: bytes) -> str:
         message_bytes = self.private_key.decrypt(

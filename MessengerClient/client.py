@@ -1,18 +1,21 @@
 # client app using rest api to communicate with server
-
-import requests
-import secrets
-import constants
-from MessengerClient.security import ClientSecurityHandler
-from menu_utils import Menu
-import logging
-import websocket
 import json
+import logging
+import os
+import secrets
 import threading
+
+import websocket
+from dotenv import load_dotenv
+
+import constants
+from menu_utils import Menu
+from security import ClientSecurityHandler
 
 
 class Client:
     def __init__(self):
+        load_dotenv()
         self.token = None
         self.username = None
         self.password = None
@@ -21,8 +24,8 @@ class Client:
         self.server_nonce = None
         self.client_nonce = None
 
-        self.server_ip = '127.0.0.1'
-        self.server_port = 80
+        self.server_ip = os.getenv('SERVER_IP')
+        self.server_port = int(os.getenv('SERVER_PORT'))
         self.base_url = f'http://{self.server_ip}:{self.server_port}'
         self.ws_url = f'ws://{self.server_ip}:{self.server_port}/ws'
         self.security_service = ClientSecurityHandler()

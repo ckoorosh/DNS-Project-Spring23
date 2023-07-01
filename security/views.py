@@ -2,10 +2,10 @@ import base64
 import json
 import os
 
+from MessangerServer.SecurityUtils.RSA import RSA
+from MessangerServer.utlis import b64_to_bytes
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-
-from MessangerServer.SecurityUtils.RSA import RSA
 from home.models import User
 from security.Session import SessionHandler
 
@@ -41,9 +41,10 @@ def get_rsa_pub(request):
 def create_session(request):
     if request.method != 'POST':
         return invalid_request()
-    encrypted_message = request.POST['encrypted_message']
+    encrypted_message = b64_to_bytes(request.POST['encrypted_message'])
     mac = request.POST['mac']
-    session_id, message, signature = SessionHandler().new_session_request(encrypted_message, mac)
+    encrypted_keys = b64_to_bytes(request.POST['encrypted_keys'])
+    session_id, message, signature = SessionHandler().new_session_request(encrypted_keys, encrypted_message, mac)
     signature_str = base64.b64encode(signature).decode('utf-8')
     response_dict = {
         'message': message,

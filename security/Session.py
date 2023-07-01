@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from typing import Tuple
@@ -5,7 +6,8 @@ from typing import Tuple
 from MessangerServer.SecurityProtocols.RSAWithDHProtocol import RSAWithDHProtocol
 from MessangerServer.SecurityProtocols.SymmetricSessionProtocol import SymmetricSessionProtocol
 from MessangerServer.SecurityUtils.RSA import RSA
-from MessangerServer.utlis import Singleton
+from MessangerServer.utlis import Singleton, b64_to_bytes, bytes_to_b64
+from django.http import HttpResponse
 
 
 class Session:
@@ -37,20 +39,44 @@ class SessionHandler(metaclass=Singleton):
         if self.last_update + 1000 > time.time():
             return
         new_sessions = {}
-        for session in self.sessions:
+        for _, session in self.sessions.items():
             if session.expiry < time.time():
                 new_sessions[session.session_id] = session
         self.sessions = new_sessions
 
-    def decrypt_message(self, message_bytes: bytes, message_nonce: bytes, session_id: int) -> str:
+    def decrypt_message(self, session_id: int, message_nonce: str, message_bytes: str):
         session = self.sessions[session_id]
-        return session.decrypt(message_bytes, message_nonce)
+        plain = session.decrypt(b64_to_bytes(message_bytes), b64_to_bytes(message_nonce))
+        message_dict = json.loads(plain)
+        return message_dict['headers'], message_dict['data']
 
-    def new_session_request(self, encrypted_message, mac):
+    def new_session_request(self, encrypted_keys, encrypted_message, mac):
         rsa_protocol = RSAWithDHProtocol(self.rsa)
-        message, signature = rsa_protocol.server_phase1(encrypted_message, mac)
+        message, signature = rsa_protocol.server_phase1(encrypted_message, encrypted_keys, mac)
         key = rsa_protocol.get_derived_key()
         symmetric_protocol = SymmetricSessionProtocol(key)
         session = Session(rsa_protocol.session_id, symmetric_protocol)
         self.add_session(session)
         return session.session_id, message, signature
+
+    def get_http_response(self, session_id, content, status, content_type=None):
+        if content.__class__ == str:
+            t = 'str'
+        else:
+            t = 'json'
+        message_dict = {
+            'type': t,
+            'content': content
+        }
+        message = json.dumps(message_dict)
+
+        session = self.sessions[session_id]
+        nonce, encrypted = session.encrypt(message)
+        encrypted = {
+            'nonce': bytes_to_b64(nonce),
+            'data': bytes_to_b64(encrypted)
+        }
+        if content_type is None:
+            return HttpResponse(content=json.dumps(encrypted), status=status)
+        else:
+            return HttpResponse(content=encrypted, status=status, content_type=content_type)

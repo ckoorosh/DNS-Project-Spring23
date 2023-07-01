@@ -1,7 +1,9 @@
 import os
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
 from cryptography.hazmat.primitives import padding
-from utils import *
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+from SecurityUtils.utils import convert_to_bytes
 
 
 def create_aes_key():
