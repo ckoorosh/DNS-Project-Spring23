@@ -1,6 +1,7 @@
 from typing import List, Dict
 
 from SecurityUtils.DiffieHellman import ECDiffieHellman
+from SecurityUtils.utils import bytes_to_b64
 
 
 class UserKeys:
@@ -27,7 +28,7 @@ class UserKeys:
         keys = UserSerializableKeys()
         keys.idk = self.idk.get_my_pub()
         keys.signed_prekey = self.signed_prekey.get_my_pub()
-        keys.prekey_signature = self.idk.sign(keys.signed_prekey)
+        keys.prekey_signature = bytes_to_b64(self.idk.sign(keys.signed_prekey))
         keys.ot_prekeys = {i: self.ot_prekeys[i].get_my_pub() for i in range(100)}
         return keys
 
@@ -47,7 +48,7 @@ class UserSerializableKeys:
     idk: str
     signed_prekey: str
     prekey_signature: str
-    ot_prekeys: Dict[str, str]
+    ot_prekeys: Dict[int, str]
 
     def __init__(self):
         pass

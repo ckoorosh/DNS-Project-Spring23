@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import constants
 from menu_utils import Menu
 from security import ClientSecurityHandler
+from UserKeys import UserKeys, UserSerializableKeys
 
 
 class Client:
@@ -21,8 +22,7 @@ class Client:
         self.password = None
         self.public_key = None  # load public key from file if exists
         self.private_key = None
-        self.server_nonce = None
-        self.client_nonce = None
+        self.user_keys = UserKeys()
 
         self.server_ip = os.getenv('SERVER_IP')
         self.server_port = int(os.getenv('SERVER_PORT'))
@@ -81,19 +81,25 @@ class Client:
         self.name = name
         self.username = username
         self.password = password
-        # todo: generate public/private key pair
-        self.public_key = secrets.token_urlsafe(16)
         content, response = self.send_message(self.base_url + constants.REGISTER, {
             "name": self.name,
             "username": self.username,
-            "password": self.password,
-            "public_key": self.public_key,
+            "password": self.password
         })
 
         if response.status_code == 201:
             self.token = json.loads(content)['token']
             self.connect_ws()
-            return True
+            self.user_keys.generate()
+            keys = self.user_keys.get_public_keys()
+            content, response = self.send_message(self.base_url + constants.SEND_PUBLIC_KEYS, {
+                'idk': keys.idk, 
+                'signed_prekey': keys.signed_prekey,
+                'prekey_signature': keys.prekey_signature,
+                'ot_prekeys': keys.ot_prekeys
+            })
+            if response.status_code == 200:
+                return True
         else:
             return False
 
@@ -115,8 +121,7 @@ class Client:
         self.password = password
         content, response = self.send_message(self.base_url + constants.LOGIN, {
             "username": self.username,
-            "password": self.password,
-            "public_key": self.public_key,
+            "password": self.password
         })
 
         if response.status_code == 200:

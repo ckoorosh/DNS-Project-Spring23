@@ -42,12 +42,11 @@ def register(request):
         name = body['name']
         username = body['username']
         password = body['password']
-        public_key = body.get('public_key', None)
 
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            user = User(username=username, public_key=public_key, name=name)
+            user = User(username=username, name=name)
             user.set_password(password)
             user.set_pk_identifier()
             user.save()
@@ -68,6 +67,40 @@ def logout(request):
         return session_handler.get_http_response(session_id, "Logged out.", status=200)
 
     return session_handler.get_http_response(session_id, "Invalid logout request.", status=400)
+
+
+@csrf_exempt
+def send_public_keys(request):
+    session_handler = SessionHandler()
+    session_id = _get_session_id(request)
+    headers, body = session_handler.decrypt_message(session_id, request.POST['nonce'], request.POST['message'])
+    if request.method == 'POST':
+        token = headers['Authorization'].split(' ')[1]
+        username = JwtUtil().jwt_decode(token)['username']
+        idk = body['idk']
+        signed_prekey = body['signed_prekey']
+        prekey_signature = body['prekey_signature']
+        ot_prekeys = body['ot_prekeys']
+        try:
+            user = User.objects.get(username=username)
+            user.idk = idk
+            user.signed_prekey = signed_prekey
+            user.prekey_signature = prekey_signature
+            user.save()
+            for index, ot_prekey in ot_prekeys.items():
+                user_ot_prekey = OTPreKey(user=user, index=index, key=ot_prekey)
+                user_ot_prekey.save()
+            return session_handler.get_http_response(session_id, "Public key updated.", status=200)
+        except User.DoesNotExist:
+            return session_handler.get_http_response(session_id, "Invalid user.", status=400)
+
+    return session_handler.get_http_response(session_id, "Invalid public key request.", status=400)
+
+
+def get_otprekeys(user):
+    otprekeys = OTPreKey.objects.filter(user=user)
+    otprekeys = {otprekey.index: otprekey.key for otprekey in otprekeys}
+    return otprekeys
 
 
 @csrf_exempt
