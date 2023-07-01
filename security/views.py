@@ -14,12 +14,12 @@ def _get_rsa():
     rsa = RSA()
     try:
         user = User.objects.get(username=os.getenv('SERVER_USERNAME'))
-        rsa.set_private_pub(user.public_key)
+        rsa.set_private_pub(user.idk)
     except User.DoesNotExist:
         rsa.generate_key()
         user = User(
             username=os.getenv('SERVER_USERNAME'),
-            public_key=rsa.get_private()
+            idk=rsa.get_private()
         )
         user.save()
     return rsa
