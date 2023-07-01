@@ -3,11 +3,12 @@ import os
 import time
 from typing import Tuple
 
+from django.http import HttpResponse
+
 from MessangerServer.SecurityProtocols.RSAWithDHProtocol import RSAWithDHProtocol
 from MessangerServer.SecurityProtocols.SymmetricSessionProtocol import SymmetricSessionProtocol
 from MessangerServer.SecurityUtils.RSA import RSA
 from MessangerServer.utlis import Singleton, b64_to_bytes, bytes_to_b64
-from django.http import HttpResponse
 
 
 class Session:
@@ -44,11 +45,15 @@ class SessionHandler(metaclass=Singleton):
                 new_sessions[session.session_id] = session
         self.sessions = new_sessions
 
-    def decrypt_message(self, session_id: int, message_nonce: str, message_bytes: str):
+    def decrypt_message(self, session_id: int, message_nonce: str, message: str):
         session = self.sessions[session_id]
-        plain = session.decrypt(b64_to_bytes(message_bytes), b64_to_bytes(message_nonce))
+        plain = session.decrypt(b64_to_bytes(message), b64_to_bytes(message_nonce))
         message_dict = json.loads(plain)
         return message_dict['headers'], message_dict['data']
+
+    def decrypt_str(self, session_id: int, message_nonce: str, message: str) -> str:
+        session = self.sessions[session_id]
+        return session.decrypt(b64_to_bytes(message), b64_to_bytes(message_nonce))
 
     def new_session_request(self, encrypted_keys, encrypted_message, mac):
         rsa_protocol = RSAWithDHProtocol(self.rsa)
@@ -80,3 +85,8 @@ class SessionHandler(metaclass=Singleton):
             return HttpResponse(content=json.dumps(encrypted), status=status)
         else:
             return HttpResponse(content=json.dumps(encrypted), status=status, content_type=content_type)
+
+    def encrypt_message(self, session_id: int, message: str) -> Tuple[str, str]:
+        session = self.sessions[session_id]
+        nonce, encrypted_message = session.encrypt(message)
+        return bytes_to_b64(nonce), bytes_to_b64(encrypted_message)

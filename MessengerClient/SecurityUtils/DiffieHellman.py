@@ -1,7 +1,6 @@
 import cryptography
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurveSignatureAlgorithm
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 
@@ -13,11 +12,11 @@ class ECDiffieHellman:
 
     def generate_private_key(self):
         self.private_key = ec.generate_private_key(ec.SECP384R1())
+
     def set_peer_pub(self, peer_pub: str):
         peer_pub_bytes = bytes(peer_pub, 'utf-8')
         recovered_pub = serialization.load_pem_public_key(peer_pub_bytes)
         self.peer_pub = recovered_pub
-
 
     def set_private_pub(self, private: str):
         private_key_bytes = bytes(private, 'utf-8')
@@ -31,6 +30,15 @@ class ECDiffieHellman:
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
         return pub_bytes.decode('utf-8')
+
+    def get_my_private(self) -> str:
+        pk_bytes = self.private_key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption()
+        )
+        return pk_bytes.decode('utf-8')
+
 
     def get_peer_pub(self) -> str:
         pub_bytes = self.peer_pub.public_bytes(
