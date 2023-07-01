@@ -6,7 +6,7 @@ from django.urls import re_path
 from MessangerServer import consumers
 
 websocket_patterns = [
-    re_path(r'ws/(?P<user_id>\w+)/$', consumers.WSConsumer.as_asgi())
+    re_path(r'ws/(?P<username>\w+)/$', consumers.WSConsumer.as_asgi())
 ]
 
 application = ProtocolTypeRouter(
