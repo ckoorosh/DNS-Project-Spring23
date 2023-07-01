@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from typing import Tuple
 
 import requests
 
@@ -74,3 +75,10 @@ class ClientSecurityHandler(metaclass=Singleton):
             return decrypted_dict['content'], resp
         else:
             return json.loads(decrypted_dict['content']), resp
+
+    def encrypt_str(self, text: str) -> Tuple[str, str]:
+        nonce, encrypted_text = self.symmetric_protocol.encrypt_message(text)
+        return bytes_to_b64(nonce), bytes_to_b64(encrypted_text)
+
+    def decrypt_str(self, nonce: str, cipher: str) -> str:
+        return self.symmetric_protocol.decrypt_message(b64_to_bytes(nonce), b64_to_bytes(cipher))

@@ -54,8 +54,13 @@ class Client:
         data = json.loads(message)
         if 'type' in data and data['type'] == 'ping':
             ws.send(json.dumps({'type': 'pong'}))
-        else:
-            self.logger.info(f'Received WS message {message}')
+            return
+        if data.__contains__('byte_cipher'):
+            raise NotImplementedError()
+
+        plain = self.security_service.decrypt_str(data['nonce'], data['cipher'])
+        message_dict = json.loads(plain)
+        self.logger.info(f'Received WS message {message_dict}')
 
     def on_error(self, ws, error):
         self.logger.error(error)
@@ -93,8 +98,10 @@ class Client:
             return False
 
     def connect_ws(self):
+        nonce, token = self.security_service.encrypt_str(self.token)
+        session_id = self.security_service.session_id
         self.ws = websocket.WebSocketApp(f'{self.ws_url}/{self.username}/',
-                                         cookie=f'authCookie={self.token}',
+                                         cookie=f'authCookie={token};nonce={nonce};session={session_id}',
                                          on_message=self.on_message,
                                          on_error=self.on_error,
                                          on_close=self.on_close,
