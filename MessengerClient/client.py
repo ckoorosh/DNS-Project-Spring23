@@ -5,6 +5,7 @@ import json
 import hashlib
 import secrets
 import constants
+from MessengerClient.security import ClientSecurityHandler
 from menu_utils import Menu
 import logging
 
@@ -22,6 +23,7 @@ class Client:
         self.server_ip = '127.0.0.1'
         self.server_port = 80
         self.base_url = f'http://{self.server_ip}:{self.server_port}'
+        self.security_service = ClientSecurityHandler()
 
         self.menu = Menu(self)
 
@@ -37,7 +39,7 @@ class Client:
         if self.token:
             headers['Authorization'] = f'Bearer {self.token}'
         self.logger.debug(f'Sending message to {url} and message {message}')
-        response = requests.post(url, data=message, headers=headers)
+        response = self.security_service.post(url, data=message, headers=headers)
         self.logger.debug(f'Received response {response.content}')
         return response
 
