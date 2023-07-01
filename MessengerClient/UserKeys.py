@@ -1,11 +1,12 @@
 from typing import List, Dict
 
-from doubleratchet import DoubleRatchet
-
-from SecurityProtocols.DoubleRatchetProtocol import DoubleRatchetProtocol
-from SecurityUtils.DiffieHellman import ECDiffieHellman
-from SecurityUtils.utils import bytes_to_b64
+from SecurityProtocols.DoubleRatchetProtocol import DoubleRatchetProtocol, DoubleRatchetEncoder, DoubleRatchetDecoder
+from SecurityUtils.DiffieHellman import ECDiffieHellman, ECDiffieHellmanEncoder, ECDiffieHellmanDecoder
+from SecurityUtils.utils import bytes_to_b64, b64_to_bytes
+from SecurityUtils.ChaCha import ChaCha20Poly1305
 from utils import Singleton
+import hashlib
+import json
 
 
 class UserKeys(metaclass=Singleton):
@@ -46,14 +47,39 @@ class UserKeys(metaclass=Singleton):
         keys.ot_prekeys = {i: self.ot_prekeys[i].get_my_private() for i in range(100)}
         return keys
 
-    def load_keys(self, password):
-        pass
-
     def get_otp_key(self, index) -> ECDiffieHellman:
         return self.ot_prekeys[index]
 
     def append_dr(self, username, dr):
         self.chat_keys[username] = dr
+
+    def save_keys(self, password):
+        keys = {'idk': json.dumps(self.idk, cls=ECDiffieHellmanEncoder), 
+                'signed_prekey': json.dumps(self.signed_prekey, cls=ECDiffieHellmanEncoder),
+                'ot_prekeys': [json.dumps(self.ot_prekeys[i], cls=ECDiffieHellmanEncoder) for i in range(100)],
+                'chat_keys': {username: json.dumps(self.chat_keys[username], 
+                                                   cls=DoubleRatchetEncoder) for username in self.chat_keys.keys()}}
+        keys = json.dumps(keys)
+        file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
+        chacha = ChaCha20Poly1305(key=file_key)
+        nonce, cipher = chacha.encrypt(keys)
+        with open('keys.json', 'w') as f:
+            save_dict = {'nonce': bytes_to_b64(nonce), 'cipher': bytes_to_b64(cipher)}
+            f.write(json.dumps(save_dict))
+
+    def load_keys(self, password):
+        load_dict = json.load(open('keys.json', 'r'))
+        file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
+        chacha = ChaCha20Poly1305(key=file_key)
+        nonce = b64_to_bytes(load_dict['nonce'])
+        cipher = b64_to_bytes(load_dict['cipher'])
+        keys = chacha.decrypt(nonce, cipher)
+        keys = json.loads(keys)
+        self.idk = json.loads(keys['idk'], cls=ECDiffieHellmanDecoder)
+        self.signed_prekey = json.loads(keys['signed_prekey'], cls=ECDiffieHellmanDecoder)
+        self.ot_prekeys = [json.loads(keys['ot_prekeys'][i], cls=ECDiffieHellmanDecoder) for i in range(100)]
+        self.chat_keys = {username: json.loads(keys['chat_keys'][username], 
+                                               cls=DoubleRatchetDecoder) for username in keys['chat_keys'].keys()}
 
 
 class UserSerializableKeys:

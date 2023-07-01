@@ -103,6 +103,7 @@ class Client:
                 'prekey_signature': keys.prekey_signature,
                 'ot_prekeys': keys.ot_prekeys
             })
+            self.user_keys.save_keys(self.password)
             if response.status_code == 200:
                 return True
         else:
@@ -132,6 +133,7 @@ class Client:
         if response.status_code == 200:
             self.token = json.loads(content)['token']
             self.connect_ws()
+            self.user_keys.load_keys(self.password)
             return True
         else:
             return False
