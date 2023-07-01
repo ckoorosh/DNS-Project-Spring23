@@ -50,7 +50,7 @@ class Menu:
             return
         print('-- Chats --')
         for chat in chats:
-            print(f'{chat["username"]}: {chat["last_message"]}')
+            print(f'{chat}')
         print('----------')
 
     def send_chat_message(self):
