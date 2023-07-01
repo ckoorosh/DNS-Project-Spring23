@@ -1,17 +1,21 @@
 # client app using rest api to communicate with server
-
-import requests
+import json
+import logging
+import os
 import secrets
+import threading
+
+import websocket
+from dotenv import load_dotenv
+
 import constants
 from menu_utils import Menu
-import logging
-import websocket
-import json
-import threading
+from security import ClientSecurityHandler
 
 
 class Client:
     def __init__(self):
+        load_dotenv()
         self.token = None
         self.username = None
         self.password = None
@@ -20,10 +24,11 @@ class Client:
         self.server_nonce = None
         self.client_nonce = None
 
-        self.server_ip = '127.0.0.1'
-        self.server_port = 80
+        self.server_ip = os.getenv('SERVER_IP')
+        self.server_port = int(os.getenv('SERVER_PORT'))
         self.base_url = f'http://{self.server_ip}:{self.server_port}'
         self.ws_url = f'ws://{self.server_ip}:{self.server_port}/ws'
+        self.security_service = ClientSecurityHandler()
 
         self.menu = Menu(self)
 
@@ -39,7 +44,7 @@ class Client:
         if self.token:
             headers['Authorization'] = f'Bearer {self.token}'
         self.logger.debug(f'Sending message to {url} and message {message}')
-        response = requests.post(url, data=message, headers=headers)
+        response = self.security_service.post(url, data=message, headers=headers)
         self.logger.debug(f'Received response {response.text}')
         return response
 
@@ -53,7 +58,7 @@ class Client:
             self.logger.info(f'Received WS message {message}')
 
     def on_error(self, ws, error):
-        self.logger.error(error)        
+        self.logger.error(error)
 
     def on_close(self, ws):
         self.logger.info("WebSocket closed")
@@ -86,7 +91,7 @@ class Client:
             return True
         else:
             return False
-        
+
     def connect_ws(self):
         self.ws = websocket.WebSocketApp(f'{self.ws_url}/{self.username}/',
                                          cookie=f'authCookie={self.token}',
@@ -175,8 +180,8 @@ class Client:
             groups_data = []
             for group in groups:
                 group_last_message = ''  # todo: get last message from local
-                groups_data.append({'name': group['name'], 
-                                    'id': group['id'], 
+                groups_data.append({'name': group['name'],
+                                    'id': group['id'],
                                     'last_message': group_last_message})
             return groups_data
         else:

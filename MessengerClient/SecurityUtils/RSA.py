@@ -2,11 +2,12 @@ import json
 from typing import Tuple
 
 import cryptography
-from MessangerServer.SecurityUtils.ChaCha import ChaCha20Poly1305
-from MessangerServer.utlis import bytes_to_b64
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric import rsa
+
+from SecurityUtils.ChaCha import ChaCha20Poly1305
+from SecurityUtils.utils import bytes_to_b64
 
 
 class RSA:
