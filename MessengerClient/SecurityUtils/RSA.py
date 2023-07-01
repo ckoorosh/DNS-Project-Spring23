@@ -13,7 +13,7 @@ def create_rsa_key():
 
 
 def encode_rsa_private(key, password):
-    password = utils.convert_to_bytes(password)
+    password = convert_to_bytes(password)
     return key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
@@ -22,8 +22,8 @@ def encode_rsa_private(key, password):
 
 
 def decode_rsa_private(coded_key, password):
-    password = utils.convert_to_bytes(password)
-    coded_key = utils.convert_to_bytes(coded_key)
+    password = convert_to_bytes(password)
+    coded_key = convert_to_bytes(coded_key)
     return serialization.load_pem_private_key(
         coded_key,
         password=password,
@@ -38,12 +38,12 @@ def encode_rsa_public(public_key):
 
 
 def decode_rsa_public(coded_key):
-    coded_key = utils.convert_to_bytes(coded_key)
+    coded_key = convert_to_bytes(coded_key)
     return load_pem_public_key(coded_key)
 
 
 def sign_rsa(key, message):
-    message = utils.convert_to_bytes(message)
+    message = convert_to_bytes(message)
     return key.sign(
         message,
         padding.PSS(
@@ -55,8 +55,8 @@ def sign_rsa(key, message):
 
 
 def verify_rsa(key, signature, message):
-    message = utils.convert_to_bytes(message)
-    signature = utils.convert_to_bytes(signature)
+    message = convert_to_bytes(message)
+    signature = convert_to_bytes(signature)
     return key.verify(
         signature,
         message,
@@ -69,7 +69,7 @@ def verify_rsa(key, signature, message):
 
 
 def encrypt(key, message):
-    message = utils.convert_to_bytes(message)
+    message = convert_to_bytes(message)
     return key.encrypt(
         message,
         padding.OAEP(
@@ -81,7 +81,7 @@ def encrypt(key, message):
 
 
 def decrypt(key, encrypted_message):
-    encrypted_message = utils.convert_to_bytes(encrypted_message)
+    encrypted_message = convert_to_bytes(encrypted_message)
     return key.decrypt(
         encrypted_message,
         padding.OAEP(
