@@ -5,7 +5,7 @@ from . import utils
 
 
 def create_dh_params():
-    return dh.generate_parameters(generator=2, key_size=2048)
+    return dh.generate_parameters(generator=2, key_size=1024)
 
 
 def create_dh_private_key(params):
