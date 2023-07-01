@@ -4,6 +4,7 @@ import logging
 import os
 import secrets
 import threading
+import hashlib
 
 import websocket
 from dotenv import load_dotenv
@@ -169,6 +170,13 @@ class Client:
 
     def view_chat(self, user):
         pass  # todo: get chat history from local
+
+    def confirm_session(self, user):
+        session_key = 'session_key'  # todo: get session key from security_service
+        content = hashlib.sha256(session_key.encode()).hexdigest()[:16]
+        # print emoji from content
+
+        return content
 
     def create_group(self, name):
         content, response = self.send_message(self.base_url + constants.CREATE_GROUP, {

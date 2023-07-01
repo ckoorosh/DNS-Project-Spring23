@@ -105,6 +105,13 @@ class Menu:
         else:
             print('Invalid username!')
             return False
+        
+
+    def confirm_session(self):
+        if self.user:
+            content = self.client.confirm_session(self.user)
+            if content:
+                print(content)
 
 
     def view_online_users(self):
@@ -205,6 +212,7 @@ class Menu:
         while True:
             print('1. Send Message')
             print('2. View Messages')
+            print('3. Confirm Session')
             print('0. Back')
             choice = input('Enter choice: ')
             self.clear()
@@ -212,6 +220,8 @@ class Menu:
                 self.send_chat_message()
             elif choice == '2':
                 self.view_chat(update=True)
+            elif choice == '3':
+                self.confirm_session()
             elif choice == '0':
                 self.user = None
                 break
