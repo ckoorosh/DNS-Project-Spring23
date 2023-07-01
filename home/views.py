@@ -6,6 +6,7 @@ from .models import *
 import hashlib
 import json
 from MessangerServer.websocket_manager import WebsocketManager
+import asyncio
 
 
 @csrf_exempt
@@ -97,13 +98,13 @@ def send_chat_message(request):
 
         if recipient == sender:
             return HttpResponse("Cannot send message to self.", status=400)
-        
+
         success = WebsocketManager().send_message(recipient.username, message)
         if success:
             return HttpResponse("Message sent.", status=200)
         else:
             return HttpResponse("Message not sent.", status=400)
-            
+
     return HttpResponse("Invalid message request.", status=400)
 
 
@@ -146,7 +147,8 @@ def create_group(request):
         group.save()
         group_user = GroupChatUser(user=creator, group=group, role='admin')
         group_user.save()
-        return HttpResponse("Group created.", status=201)
+        response = {'group id': group.identifier}
+        return HttpResponse(json.dumps(response), status=200)
 
     return HttpResponse("Invalid group request.", status=400)
 
@@ -187,10 +189,10 @@ def add_member_to_group(request):
             member = User.objects.get(username=member)
         except (User.DoesNotExist, GroupChat.DoesNotExist):
             return HttpResponse("Invalid group request.", status=400)
-        
+
         if group_user.role != 'admin':
             return HttpResponse("User is not admin.", status=400)
-        
+
         if not WebsocketManager().is_user_online(member.username):
             return HttpResponse("User is not online.", status=400)
 
@@ -261,3 +263,37 @@ def make_member_admin(request):
         return HttpResponse("Member made admin.", status=200)
 
     return HttpResponse("Invalid group request.", status=400)
+
+
+@csrf_exempt
+def group_handshake(request):
+    if request.method == 'POST':
+        token = request.headers['Authorization'].split(' ')[1]
+        username = JwtUtil().jwt_decode(token)['username']
+        destination = request.POST['destination']
+        value = request.POST['value']
+        message_type = request.POST['type']
+        iv = request.POST['iv']
+        params = request.POST['params']
+        group = request.POST['group']
+        try:
+            sender = User.objects.get(username=username)
+            receiver = User.objects.get(username=destination)
+        except (User.DoesNotExist, GroupChat.DoesNotExist):
+            return HttpResponse("Invalid group handshake request.", status=400)
+        # TODO
+        # send to reciever
+        # sender id, value , params,  message-type=1
+        sending_message = {'sender': username,
+                           'value': value,
+                           'group': group,
+                           'type': message_type,
+                           'params': params,
+                           'iv': iv}
+        success = asyncio.run(WebsocketManager().send_message_to_user(receiver.username, sending_message))
+
+        if success:
+            return HttpResponse("Message sent.", status=200)
+        else:
+            return HttpResponse("Message not sent.", status=400)
+    return HttpResponse("Invalid group handshake request.", status=400)
