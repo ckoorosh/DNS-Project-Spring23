@@ -1,15 +1,21 @@
 from typing import List, Dict
 
+from doubleratchet import DoubleRatchet
+
+from SecurityProtocols.DoubleRatchetProtocol import DoubleRatchetProtocol
 from SecurityUtils.DiffieHellman import ECDiffieHellman
 from SecurityUtils.utils import bytes_to_b64
+from utils import Singleton
 
 
-class UserKeys:
+class UserKeys(metaclass=Singleton):
     idk: ECDiffieHellman
     signed_prekey: ECDiffieHellman
     ot_prekeys: List[ECDiffieHellman]
+    chat_keys: Dict[str, DoubleRatchetProtocol]
 
     def __init__(self):
+        self.chat_keys = {}
         pass
 
     def generate(self):
@@ -42,6 +48,12 @@ class UserKeys:
 
     def load_keys(self, password):
         pass
+
+    def get_otp_key(self, index) -> ECDiffieHellman:
+        return self.ot_prekeys[index]
+
+    def append_dr(self, username, dr):
+        self.chat_keys[username] = dr
 
 
 class UserSerializableKeys:

@@ -2,16 +2,15 @@
 import json
 import logging
 import os
-import secrets
 import threading
 
 import websocket
 from dotenv import load_dotenv
 
 import constants
+from UserKeys import UserKeys
 from menu_utils import Menu
 from security import ClientSecurityHandler
-from UserKeys import UserKeys, UserSerializableKeys
 
 
 class Client:
@@ -55,11 +54,17 @@ class Client:
         if 'type' in data and data['type'] == 'ping':
             ws.send(json.dumps({'type': 'pong'}))
             return
+
         if data.__contains__('byte_cipher'):
             raise NotImplementedError()
 
         plain = self.security_service.decrypt_str(data['nonce'], data['cipher'])
         message_dict = json.loads(plain)
+        real_message: str = message_dict['message']['message']
+        if real_message.startswith('1'):
+            self.security_service.answer_exchange_key(real_message[1:])
+        elif real_message.startswith('2'):
+            self.security_service.receive_message(real_message[2:])
         self.logger.info(f'Received WS message {message_dict}')
 
     def on_error(self, ws, error):
@@ -93,7 +98,7 @@ class Client:
             self.user_keys.generate()
             keys = self.user_keys.get_public_keys()
             content, response = self.send_message(self.base_url + constants.SEND_PUBLIC_KEYS, {
-                'idk': keys.idk, 
+                'idk': keys.idk,
                 'signed_prekey': keys.signed_prekey,
                 'prekey_signature': keys.prekey_signature,
                 'ot_prekeys': keys.ot_prekeys
@@ -173,7 +178,7 @@ class Client:
         pass  # todo: get chats from local
 
     def view_chat(self, user):
-        pass  # todo: get chat history from local
+        return True, []
 
     def create_group(self, name):
         content, response = self.send_message(self.base_url + constants.CREATE_GROUP, {

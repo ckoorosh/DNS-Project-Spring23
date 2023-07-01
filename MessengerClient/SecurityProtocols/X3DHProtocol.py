@@ -6,6 +6,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from SecurityUtils.ChaCha import ChaCha20Poly1305
 from SecurityUtils.DiffieHellman import ECDiffieHellman
+from SecurityUtils.utils import bytes_to_b64
 
 
 class TripleDHProtocol:
