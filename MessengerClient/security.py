@@ -205,12 +205,12 @@ class ClientSecurityHandler(metaclass=Singleton):
         file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce, cipher = chacha.encrypt(messages)
-        with open(f'chats/{username}.json', 'w') as f:
+        with open(f'chats/chats_{self.client.username}/{username}.json', 'w') as f:
             save_dict = {'nonce': bytes_to_b64(nonce), 'cipher': bytes_to_b64(cipher)}
             f.write(json.dumps(save_dict))
 
     def load_chat(self, username, password):
-        load_dict = json.load(open(f'chats/{username}.json', 'r'))
+        load_dict = json.load(open(f'chats/chats_{self.client.username}/{username}.json', 'r'))
         file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce = b64_to_bytes(load_dict['nonce'])
