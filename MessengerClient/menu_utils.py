@@ -85,7 +85,7 @@ class Menu:
     def send_group_message(self):
         message = self.get_input('Enter message: ')
         if self.group and message:
-            success = self.client.send_group_message(self.group, message)
+            success = self.client.send_group_chat_message(self.group, message)
             if success:
                 self.add_to_buf('Message sent!')
             else:
@@ -144,7 +144,7 @@ class Menu:
             success, group_data = self.client.view_group_chat(group)
             if success:
                 self.clear()
-                self.add_to_buf(f'Group {group_data["name"]({group})}')
+                # self.add_to_buf(f'Group {group_data["name"]({group})}')
                 self.add_to_buf('----------------------')
                 for message in group_data['messages']:
                     self.add_to_buf(f'{message["sender"]}: {message["message"]}')

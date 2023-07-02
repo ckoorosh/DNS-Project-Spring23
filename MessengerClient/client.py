@@ -70,6 +70,10 @@ class Client:
             self.security_service.answer_exchange_key(real_message[1:], self.username)
         elif real_message.startswith('2'):
             self.security_service.receive_message(real_message[1:])
+        elif real_message.startswith('3'):
+            self.security_service.receive_group_key(real_message[1:])
+        elif real_message.startswith('4'):
+            self.security_service.receive_group_message(real_message[1:])
         ws.send(json.dumps({'type': 'pong'}))
         # self.logger.info(f'Received WS message {message_dict}')
 
@@ -181,9 +185,12 @@ class Client:
             return False
 
     def send_group_chat_message(self, group, message):
+        nonce, cipher = self.security_service.encrypt_group_message(group, message)
+
         content, response = self.send_message(self.base_url + constants.SEND_GROUP_MESSAGE, {
-            "group": group,
-            "message": message,
+            'group': group,
+            'nonce': nonce,
+            'cipher': cipher
         })
         if response.status_code == 200:
             return True
@@ -212,7 +219,7 @@ class Client:
             return True, messages
         else:
             return True, []
-    
+
     def save_chat(self, user):
         self.security_service.save_chat(user, self.password, self.chats[user])
 
@@ -221,6 +228,7 @@ class Client:
             "name": name,
         })
         if response.status_code == 201:
+            self.security_service.add_group(content)
             return True
         else:
             return False
@@ -242,11 +250,23 @@ class Client:
 
     def view_group_chat(self, group):
         pass  # todo: get group chat history from local
+        return True, {'name':'','messages':[]}
 
     def add_member_to_group(self, group, user):
+        if not self.security_service.does_have_key(user):
+            content, _ = self.send_message(
+                self.base_url + '/sec/user_bundle_key/',
+                {'username': user}
+            )
+            self.security_service.exchange_key(content, user, self.token, self.username)
+
+        nonce, cipher = self.security_service.group_ke_message(group, user)
+
         content, response = self.send_message(self.base_url + constants.ADD_MEMBER_TO_GROUP, {
             "group": group,
             "user": user,
+            "nonce": nonce,
+            "cipher": cipher
         })
         if response.status_code == 200:
             return True

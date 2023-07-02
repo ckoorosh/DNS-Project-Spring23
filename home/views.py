@@ -1,10 +1,11 @@
+import asyncio
 import json
+
+from django.views.decorators.csrf import csrf_exempt
 
 from MessangerServer.utlis import JwtUtil
 from MessangerServer.websocket_manager import WebsocketManager
-from django.views.decorators.csrf import csrf_exempt
 from security.Session import SessionHandler
-
 from .models import *
 
 
@@ -166,7 +167,6 @@ def send_group_message(request):
     headers, body = session_handler.decrypt_message(session_id, request.POST['nonce'], request.POST['message'])
     if request.method == 'POST':
         token = headers['Authorization'].split(' ')[1]
-        message = body['message']
         group = body['group']
         sender = JwtUtil().jwt_decode(token)['username']
 
@@ -178,9 +178,13 @@ def send_group_message(request):
             return session_handler.get_http_response(session_id, "Invalid group or user.", status=400)
 
         for group_user in group_chat_users:
-            if group_user.user == sender:
-                continue
-            WebsocketManager().send_message_to_user(group_user.user.username, message)
+            # if group_user.user == sender:
+            #     continue
+            if WebsocketManager().is_user_online(group_user.user.username):
+                body['sender'] = sender.username
+                asyncio.run(WebsocketManager().send_message_to_user(group_user.user.username, f'4{json.dumps(body)}'))
+
+        return session_handler.get_http_response(session_id, "Ok", status=200)
 
     return session_handler.get_http_response(session_id, "Invalid message request.", status=400)
 
@@ -204,7 +208,7 @@ def create_group(request):
         group.save()
         group_user = GroupChatUser(user=creator, group=group, role='admin')
         group_user.save()
-        return session_handler.get_http_response(session_id, "Group created.", status=201)
+        return session_handler.get_http_response(session_id, group.identifier, status=201)
 
     return session_handler.get_http_response(session_id, "Invalid group request.", status=400)
 
@@ -243,7 +247,6 @@ def add_member_to_group(request):
         username = JwtUtil().jwt_decode(token)['username']
         group = body['group']
         member = body['user']
-
         try:
             user = User.objects.get(username=username)
             group = GroupChat.objects.get(identifier=group)
@@ -263,6 +266,10 @@ def add_member_to_group(request):
 
         group_user = GroupChatUser(user=member, group=group, role='member')
         group_user.save()
+        if WebsocketManager().is_user_online(member.username):
+            body['sender'] = user.username
+            asyncio.run(WebsocketManager().send_message_to_user(member.username, f'3{json.dumps(body)}'))
+
         return session_handler.get_http_response(session_id, "User added to group.", status=200)
 
     return session_handler.get_http_response(session_id, "Invalid group request.", status=400)
