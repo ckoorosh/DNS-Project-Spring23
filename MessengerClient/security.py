@@ -4,8 +4,6 @@ import os
 import secrets
 import time
 from typing import Tuple
-import hashlib
-import json
 
 import requests
 
@@ -17,7 +15,6 @@ from SecurityUtils.ChaCha import ChaCha20Poly1305
 from SecurityUtils.DiffieHellman import ECDiffieHellman
 from SecurityUtils.RSA import RSA
 from SecurityUtils.utils import bytes_to_b64, b64_to_bytes
-from SecurityUtils.ChaCha import ChaCha20Poly1305
 from UserKeys import UserKeys
 from utils import Singleton
 
@@ -196,6 +193,24 @@ class ClientSecurityHandler(metaclass=Singleton):
         # Menu(None).add_to_buf(f'{sender}:  {message}')
         print(f'\n{sender}:  {message}\n')
 
+    def receive_group_key(self, context):
+        my_keys = UserKeys()
+        context = json.loads(context)
+        sender = context['sender']
+        dr = my_keys.chat_keys[sender]
+        message = dr.received_message(sender, b64_to_bytes(context['cipher']), b64_to_bytes(context['nonce']))
+        my_keys.add_group_key(context['group'], b64_to_bytes(message))
+
+    def receive_group_message(self, context):
+        my_keys = UserKeys()
+        context = json.loads(context)
+        sender = context['sender']
+        group = context['group']
+        group_key = my_keys.group_keys[group]
+        chacha = ChaCha20Poly1305(group_key)
+        message = chacha.decrypt(b64_to_bytes(context['nonce']), b64_to_bytes(context['cipher']))
+        print(f'\nGroup:{group} User:{sender}\n{message}\n')
+
     def save_chat(self, username, password, messages: list[dict]):
         messages = json.dumps(messages)
         file_key = hashlib.sha256(password.encode()).digest()  # todo: HKDF
@@ -215,6 +230,19 @@ class ClientSecurityHandler(metaclass=Singleton):
         messages = json.loads(messages)
         return messages
 
-    def add_group(self, group_id):
+    @staticmethod
+    def add_group(group_id):
         UserKeys().add_group_key(group_id, secrets.token_bytes(32))
 
+    @staticmethod
+    def group_ke_message(group, user) -> Tuple[str, str]:
+        group_key = UserKeys().group_keys[group]
+        dr = UserKeys().chat_keys[user]
+        nonce, cipher = dr.send_message(user, bytes_to_b64(group_key))
+        return bytes_to_b64(nonce), bytes_to_b64(cipher)
+
+    def encrypt_group_message(self, group, message):
+        group_key = UserKeys().group_keys[group]
+        chacha = ChaCha20Poly1305(group_key)
+        nonce, cipher = chacha.encrypt(message)
+        return bytes_to_b64(nonce), bytes_to_b64(cipher)
