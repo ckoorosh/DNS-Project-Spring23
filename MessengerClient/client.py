@@ -1,5 +1,6 @@
 # client app using rest api to communicate with server
 import glob
+import hashlib
 import json
 import logging
 import os
@@ -12,7 +13,6 @@ import constants
 from UserKeys import UserKeys
 from menu_utils import Menu
 from security import ClientSecurityHandler
-import hashlib
 
 
 class Client:
@@ -280,9 +280,9 @@ class Client:
     def view_group_chat(self, group):
         if group in self.chats:
             messages = self.security_service.load_group_chat(group, self.password)
-            return True, {'name': '','messages': messages}
+            return True, {'name': '', 'messages': messages}
         else:
-            return True, {'name': '','messages': []}
+            return True, {'name': '', 'messages': []}
 
     def add_member_to_group(self, group, user):
         if not self.security_service.does_have_key(user):
@@ -324,12 +324,13 @@ class Client:
         for remained_user in users:
             nonce, cipher = self.security_service.group_ke_message(group, remained_user)
             new_key_message[remained_user] = {'nonce': nonce, 'cipher': cipher}
-
-        content, response = self.send_message(self.base_url + constants.REMOVE_MEMBER_FROM_GROUP, {
+        req_data = {
             "group": group,
-            "user": user,
             "new_key": new_key_message
-        })
+        }
+        if user != '':
+            req_data['user'] = user
+        content, response = self.send_message(self.base_url + constants.REMOVE_MEMBER_FROM_GROUP, req_data)
         if response.status_code == 200:
             return True
         else:
