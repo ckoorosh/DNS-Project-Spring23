@@ -93,7 +93,7 @@ class ClientSecurityHandler(metaclass=Singleton):
     def does_have_key(username):
         return UserKeys().chat_keys.__contains__(username)
 
-    def exchange_key(self, key_bundle, username, token):
+    def exchange_key(self, key_bundle, username, token, me):
         exchange_protocol = TripleDHProtocol()
         my_keys = UserKeys()
         exchange_protocol.set_start_side(
@@ -122,7 +122,7 @@ class ClientSecurityHandler(metaclass=Singleton):
         )
 
         self.set_double_ratchet(
-            me='me',
+            me=me,
             username=username,
             key=exchange_protocol.get_shared_key(),
             dh=exchange_protocol.start_side_ephemeral,
@@ -141,26 +141,26 @@ class ClientSecurityHandler(metaclass=Singleton):
         )
         my_keys.append_dr(username, dr)
 
-    def answer_exchange_key(self, context):
-        context_dict = json.loads(context)
+    def answer_exchange_key(self, context, me: str):
+        context = json.loads(context)
 
         exchange_protocol = TripleDHProtocol()
         my_keys = UserKeys()
-        otp_index = int(context_dict['otp_index'])
+        otp_index = int(context['otp_index'])
         exchange_protocol.set_end_side(
-            start_side_idk=context_dict['start_side_idk'],
-            start_side_ephemeral=context_dict['start_side_ephemeral'],
+            start_side_idk=context['start_side_idk'],
+            start_side_ephemeral=context['start_side_ephemeral'],
             end_side_idk=my_keys.idk,
             end_side_signed_prekey=my_keys.signed_prekey,
             end_side_one_time_prekey=my_keys.get_otp_key(otp_index)
         )
         exchange_protocol.end_side_verify(
-            b64_to_bytes(context_dict['ad']),
-            b64_to_bytes(context_dict['nonce'])
+            b64_to_bytes(context['ad']),
+            b64_to_bytes(context['nonce'])
         )
 
         self.set_double_ratchet(
-            me='me',
+            me=me,
             username=context['sender'],
             key=exchange_protocol.get_shared_key(),
             dh=exchange_protocol.end_side_signed_prekey,
@@ -176,14 +176,16 @@ class ClientSecurityHandler(metaclass=Singleton):
             data={
                 'nonce': bytes_to_b64(nonce),
                 'cipher': bytes_to_b64(encrypted_message),
-                'username':username
+                'username': username
             },
             headers={'Authorization': f'Bearer {token}'}
         )
 
     def receive_message(self, context):
         my_keys = UserKeys()
+        context = json.loads(context)
         sender = context['sender']
         dr = my_keys.chat_keys[sender]
-        message =  dr.received_message(sender, b64_to_bytes(context['cipher']), b64_to_bytes(context['nonce']))
-        print(message)
+        message = dr.received_message(sender, b64_to_bytes(context['cipher']), b64_to_bytes(context['nonce']))
+        # Menu(None).add_to_buf(f'{sender}:  {message}')
+        print(f'\n{sender}:  {message}\n')
