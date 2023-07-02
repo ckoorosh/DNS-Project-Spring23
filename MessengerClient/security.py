@@ -218,7 +218,12 @@ class ClientSecurityHandler(metaclass=Singleton):
         group_key = my_keys.group_keys[group]
         chacha = ChaCha20Poly1305(group_key)
         message = chacha.decrypt(b64_to_bytes(context['nonce']), b64_to_bytes(context['cipher']))
-        print(f'\nGroup:{group} User:{sender}\n{message}\n')
+        # print(f'\nGroup:{group} User:{sender}\n{message}\n')
+        if group in self.client.chats:
+            self.client.chats[group].append({'sender': sender, 'message': message})
+        else:
+            self.client.chats[group] = [{'sender': sender, 'message': message}]
+        self.save_group_chat(group, self.client.password, self.client.chats[group])
 
     def save_chat(self, username, password, messages: list[dict]):
         messages = json.dumps(messages)
@@ -229,9 +234,28 @@ class ClientSecurityHandler(metaclass=Singleton):
             save_dict = {'nonce': bytes_to_b64(nonce), 'cipher': bytes_to_b64(cipher)}
             f.write(json.dumps(save_dict))
 
+    def save_group_chat(self, group, password, messages: list[dict]):
+        messages = json.dumps(messages)
+        file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
+        chacha = ChaCha20Poly1305(key=file_key)
+        nonce, cipher = chacha.encrypt(messages)
+        with open(f'chats/chats_{self.client.username}/groups/{group}.json', 'w') as f:
+            save_dict = {'nonce': bytes_to_b64(nonce), 'cipher': bytes_to_b64(cipher)}
+            f.write(json.dumps(save_dict))
+
     def load_chat(self, username, password):
         load_dict = json.load(open(f'chats/chats_{self.client.username}/{username}.json', 'r'))
         file_key = hashlib.sha256(password.encode()).digest()  # todo: HKDF
+        chacha = ChaCha20Poly1305(key=file_key)
+        nonce = b64_to_bytes(load_dict['nonce'])
+        cipher = b64_to_bytes(load_dict['cipher'])
+        messages = chacha.decrypt(nonce, cipher)
+        messages = json.loads(messages)
+        return messages
+    
+    def load_group_chat(self, group, password):
+        load_dict = json.load(open(f'chats/chats_{self.client.username}/groups/{group}.json', 'r'))
+        file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce = b64_to_bytes(load_dict['nonce'])
         cipher = b64_to_bytes(load_dict['cipher'])

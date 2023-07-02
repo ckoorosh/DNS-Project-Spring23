@@ -12,6 +12,7 @@ import constants
 from UserKeys import UserKeys
 from menu_utils import Menu
 from security import ClientSecurityHandler
+import hashlib
 
 
 class Client:
@@ -116,6 +117,8 @@ class Client:
             self.user_keys.save_keys(self.username, self.password)
             if not os.path.exists(f'chats/chats_{self.username}'):
                 os.makedirs(f'chats/chats_{self.username}')
+            if not os.path.exists(f'chats/chats_{self.username}/groups'):
+                os.makedirs(f'chats/chats_{self.username}/groups')
 
             if response.status_code == 200:
                 return True
@@ -157,9 +160,14 @@ class Client:
             self.user_keys.load_keys(self.username, self.password)
             if not os.path.exists(f'chats/chats_{self.username}'):
                 os.makedirs(f'chats/chats_{self.username}')
+            if not os.path.exists(f'chats/chats_{self.username}/groups'):
+                os.makedirs(f'chats/chats_{self.username}/groups')
             chats = self.show_chats()
             for chat in chats:
                 self.chats[chat] = self.security_service.load_chat(chat, self.password)
+            group_chats = self.get_group_chats()
+            for chat in group_chats:
+                self.chats[chat] = self.security_service.load_group_chat(chat, self.password)
 
             return True
         else:
@@ -193,6 +201,11 @@ class Client:
             'cipher': cipher
         })
         if response.status_code == 200:
+            # if group in self.chats:
+            #     self.chats[group].append({'sender': self.username, 'message': message})
+            # else:
+            #     self.chats[group] = [{'sender': self.username, 'message': message}]
+            # self.save_group_chat(group)
             return True
         else:
             return False
@@ -206,10 +219,23 @@ class Client:
         else:
             return None
 
+    def confirm_session(self, user):
+        session_key = 'session_key'  # todo: get session key from security_service
+        content = hashlib.sha256(session_key.encode()).hexdigest()[:16]
+        # print emoji from content
+
+        return content
+
     def show_chats(self):
         chats = []
         for file in glob.glob(f"chats/chats_{self.username}/*.json"):
             chats.append(file.split('\\')[1].split('.')[0])
+        return chats
+
+    def get_group_chats(self):
+        chats = []
+        for file in glob.glob(f"chats/chats_{self.username}/groups/*.json"):
+            chats.append(file.split('\\')[-1].split('.')[0])
         return chats
 
     def view_chat(self, user):
@@ -222,6 +248,9 @@ class Client:
 
     def save_chat(self, user):
         self.security_service.save_chat(user, self.password, self.chats[user])
+
+    def save_group_chat(self, group):
+        self.security_service.save_group_chat(group, self.password, self.chats[group])
 
     def create_group(self, name):
         content, response = self.send_message(self.base_url + constants.CREATE_GROUP, {
@@ -249,8 +278,11 @@ class Client:
             return None
 
     def view_group_chat(self, group):
-        pass  # todo: get group chat history from local
-        return True, {'name': '', 'messages': []}
+        if group in self.chats:
+            messages = self.security_service.load_group_chat(group, self.password)
+            return True, {'name': '','messages': messages}
+        else:
+            return True, {'name': '','messages': []}
 
     def add_member_to_group(self, group, user):
         if not self.security_service.does_have_key(user):

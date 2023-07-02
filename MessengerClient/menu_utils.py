@@ -202,10 +202,17 @@ class Menu:
         else:
             self.add_to_buf('Invalid group or member!')
 
+    def confirm_session(self):
+        if self.user:
+            content = self.client.confirm_session(self.user)
+            if content:
+                print(content)
+
     def chat(self):
         while True:
             self.add_to_buf('1. Send Message')
             self.add_to_buf('2. View Messages')
+            self.add_to_buf('3. Confirm Session')
             self.add_to_buf('0. Back')
             choice = self.get_input('Enter choice: ')
             self.clear()
@@ -213,6 +220,8 @@ class Menu:
                 self.send_chat_message()
             elif choice == '2':
                 self.view_chat(update=True)
+            elif choice == '3':
+                self.confirm_session()
             elif choice == '0':
                 self.user = None
                 break
@@ -231,7 +240,7 @@ class Menu:
             self.clear()
             if choice == '1':
                 self.send_group_message()
-            if choice == '2':
+            elif choice == '2':
                 self.view_group_chat(update=True)
             elif choice == '3':
                 self.add_member_to_group()
@@ -258,7 +267,7 @@ class Menu:
             self.clear()
             if choice == '1':
                 self.show_chats()
-            if choice == '2':
+            elif choice == '2':
                 success = self.view_chat()
                 if success:
                     self.chat()
