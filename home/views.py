@@ -161,6 +161,32 @@ def send_chat_message(request):
 
 
 @csrf_exempt
+def get_members(request):
+    session_handler = SessionHandler()
+    session_id = _get_session_id(request)
+    headers, body = session_handler.decrypt_message(session_id, request.POST['nonce'], request.POST['message'])
+    if request.method != 'POST':
+        return session_handler.get_http_response(session_id, "Invalid message request.", status=400)
+    token = headers['Authorization'].split(' ')[1]
+    group = body['group']
+    sender = JwtUtil().jwt_decode(token)['username']
+    try:
+        user = User.objects.get(username=sender)
+        group = GroupChat.objects.get(identifier=group)
+        group_chat_users = GroupChatUser.objects.filter(group=group)
+
+    except (GroupChat.DoesNotExist, User.DoesNotExist):
+        return session_handler.get_http_response(session_id, "Invalid group or user.", status=400)
+
+    if not GroupChatUser.objects.filter(user=user, group=group).exists():
+        return session_handler.get_http_response(session_id, "Invalid group or user.", status=400)
+    usernames = [group_chat_user.user.username for group_chat_user in group_chat_users]
+    usernames.remove(user.username)
+    return session_handler.get_http_response(session_id, content=json.dumps(usernames), content_type='application/json',
+                                             status=200)
+
+
+@csrf_exempt
 def send_group_message(request):
     session_handler = SessionHandler()
     session_id = _get_session_id(request)
@@ -175,6 +201,9 @@ def send_group_message(request):
             group = GroupChat.objects.get(identifier=group)
             group_chat_users = GroupChatUser.objects.filter(group=group)
         except (GroupChat.DoesNotExist, User.DoesNotExist):
+            return session_handler.get_http_response(session_id, "Invalid group or user.", status=400)
+
+        if not GroupChatUser.objects.filter(user=sender, group=group).exists():
             return session_handler.get_http_response(session_id, "Invalid group or user.", status=400)
 
         for group_user in group_chat_users:
@@ -284,24 +313,37 @@ def remove_member_from_group(request):
         token = headers['Authorization'].split(' ')[1]
         username = JwtUtil().jwt_decode(token)['username']
         group = body['group']
-        member = body['user']
+        member = None if not 'user' in body else body['user']
 
         try:
             user = User.objects.get(username=username)
             group = GroupChat.objects.get(identifier=group)
             group_user = GroupChatUser.objects.get(user=user, group=group)
-            member = User.objects.get(username=member)
+            member = None if member is None else User.objects.get(username=member)
         except (User.DoesNotExist, GroupChat.DoesNotExist):
             return session_handler.get_http_response(session_id, "Invalid group request.", status=400)
 
         if group_user.role != 'admin':
             return session_handler.get_http_response(session_id, "User is not admin.", status=400)
 
-        if not GroupChatUser.objects.filter(user=member, group=group).exists():
+        if member is not None and not GroupChatUser.objects.filter(user=member, group=group).exists():
             return session_handler.get_http_response(session_id, "User not in group.", status=400)
 
-        group_user = GroupChatUser.objects.get(user=member, group=group)
-        group_user.delete()
+        group_user = None if member is None else GroupChatUser.objects.get(user=member, group=group)
+        if group_user:
+            group_user.delete()
+        new_key_data = body['new_key']
+        for u, key_hs in new_key_data.items():
+            req_body = {'group': group.identifier, 'sender': user.username}
+            if member:
+                req_body['removed_user'] = member.username
+            req_body['nonce'] = key_hs['nonce']
+            req_body['cipher'] = key_hs['cipher']
+            req_body['user'] = u
+            u_o = User.objects.get(username=u)
+            if GroupChatUser.objects.filter(user=u_o, group=group).exists():
+                if WebsocketManager().is_user_online(u):
+                    asyncio.run(WebsocketManager().send_message_to_user(u, f'3{json.dumps(req_body)}'))
         return session_handler.get_http_response(session_id, "User removed from group.", status=200)
 
     return session_handler.get_http_response(session_id, "Invalid group request.", status=400)

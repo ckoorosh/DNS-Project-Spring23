@@ -4,8 +4,6 @@ import os
 import secrets
 import time
 from typing import Tuple
-import hashlib
-import json
 
 import requests
 
@@ -17,7 +15,6 @@ from SecurityUtils.ChaCha import ChaCha20Poly1305
 from SecurityUtils.DiffieHellman import ECDiffieHellman
 from SecurityUtils.RSA import RSA
 from SecurityUtils.utils import bytes_to_b64, b64_to_bytes
-from SecurityUtils.ChaCha import ChaCha20Poly1305
 from UserKeys import UserKeys
 from utils import Singleton
 
@@ -207,6 +204,8 @@ class ClientSecurityHandler(metaclass=Singleton):
         my_keys = UserKeys()
         context = json.loads(context)
         sender = context['sender']
+        if context.__contains__('removed_user'):
+            print(f'\n{sender} removed {context["removed_user"]} from group {context["group"]}\n')
         dr = my_keys.chat_keys[sender]
         message = dr.received_message(sender, b64_to_bytes(context['cipher']), b64_to_bytes(context['nonce']))
         my_keys.add_group_key(context['group'], b64_to_bytes(message))
@@ -223,7 +222,7 @@ class ClientSecurityHandler(metaclass=Singleton):
 
     def save_chat(self, username, password, messages: list[dict]):
         messages = json.dumps(messages)
-        file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
+        file_key = hashlib.sha256(password.encode()).digest()  # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce, cipher = chacha.encrypt(messages)
         with open(f'chats/chats_{self.client.username}/{username}.json', 'w') as f:
@@ -232,7 +231,7 @@ class ClientSecurityHandler(metaclass=Singleton):
 
     def load_chat(self, username, password):
         load_dict = json.load(open(f'chats/chats_{self.client.username}/{username}.json', 'r'))
-        file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
+        file_key = hashlib.sha256(password.encode()).digest()  # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce = b64_to_bytes(load_dict['nonce'])
         cipher = b64_to_bytes(load_dict['cipher'])

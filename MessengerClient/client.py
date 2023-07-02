@@ -1,9 +1,9 @@
 # client app using rest api to communicate with server
+import glob
 import json
 import logging
-import threading
 import os
-import glob
+import threading
 
 import websocket
 from dotenv import load_dotenv
@@ -250,7 +250,7 @@ class Client:
 
     def view_group_chat(self, group):
         pass  # todo: get group chat history from local
-        return True, {'name':'','messages':[]}
+        return True, {'name': '', 'messages': []}
 
     def add_member_to_group(self, group, user):
         if not self.security_service.does_have_key(user):
@@ -274,9 +274,29 @@ class Client:
             return False
 
     def remove_member_from_group(self, group, user):
+        content, response = self.send_message(self.base_url + '/get_members/', {'group': group})
+        if response.status_code != 200:
+            print('Something went wrong.')
+        users = json.loads(content)
+        users.remove(user)
+
+        for remained_user in users:
+            if not self.security_service.does_have_key(remained_user):
+                content, _ = self.send_message(
+                    self.base_url + '/sec/user_bundle_key/',
+                    {'username': remained_user}
+                )
+                self.security_service.exchange_key(content, remained_user, self.token, self.username)
+
+        new_key_message = {}
+        for remained_user in users:
+            nonce, cipher = self.security_service.group_ke_message(group, remained_user)
+            new_key_message[remained_user] = {'nonce': nonce, 'cipher': cipher}
+
         content, response = self.send_message(self.base_url + constants.REMOVE_MEMBER_FROM_GROUP, {
             "group": group,
             "user": user,
+            "new_key": new_key_message
         })
         if response.status_code == 200:
             return True
