@@ -1,6 +1,4 @@
 from django.urls import path
-from django.conf import settings
-from django.conf.urls.static import static
 
 from home import views
 
@@ -17,4 +15,5 @@ urlpatterns = [
     path('make_member_admin/', views.make_member_admin, name='make_member_admin'),
     path('view_online_users/', views.view_online_users, name='view_online_users'),
     path('send_public_keys/', views.send_public_keys, name='send_public_keys'),
+    path('get_members/', views.get_members, name='get_members')
 ]

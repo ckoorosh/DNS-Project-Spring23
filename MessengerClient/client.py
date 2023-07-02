@@ -1,9 +1,10 @@
 # client app using rest api to communicate with server
+import glob
+import hashlib
 import json
 import logging
-import threading
 import os
-import glob
+import threading
 
 import websocket
 from dotenv import load_dotenv
@@ -12,7 +13,6 @@ import constants
 from UserKeys import UserKeys
 from menu_utils import Menu
 from security import ClientSecurityHandler
-import hashlib
 
 
 class Client:
@@ -218,7 +218,7 @@ class Client:
             return users
         else:
             return None
-        
+
     def confirm_session(self, user):
         session_key = 'session_key'  # todo: get session key from security_service
         content = hashlib.sha256(session_key.encode()).hexdigest()[:16]
@@ -231,7 +231,7 @@ class Client:
         for file in glob.glob(f"chats/chats_{self.username}/*.json"):
             chats.append(file.split('\\')[1].split('.')[0])
         return chats
-    
+
     def get_group_chats(self):
         chats = []
         for file in glob.glob(f"chats/chats_{self.username}/groups/*.json"):
@@ -280,9 +280,9 @@ class Client:
     def view_group_chat(self, group):
         if group in self.chats:
             messages = self.security_service.load_group_chat(group, self.password)
-            return True, {'name': '','messages': messages}
+            return True, {'name': '', 'messages': messages}
         else:
-            return True, {'name': '','messages': []}
+            return True, {'name': '', 'messages': []}
 
     def add_member_to_group(self, group, user):
         if not self.security_service.does_have_key(user):
@@ -306,10 +306,31 @@ class Client:
             return False
 
     def remove_member_from_group(self, group, user):
-        content, response = self.send_message(self.base_url + constants.REMOVE_MEMBER_FROM_GROUP, {
+        content, response = self.send_message(self.base_url + '/get_members/', {'group': group})
+        if response.status_code != 200:
+            print('Something went wrong.')
+        users = json.loads(content)
+        users.remove(user)
+
+        for remained_user in users:
+            if not self.security_service.does_have_key(remained_user):
+                content, _ = self.send_message(
+                    self.base_url + '/sec/user_bundle_key/',
+                    {'username': remained_user}
+                )
+                self.security_service.exchange_key(content, remained_user, self.token, self.username)
+
+        new_key_message = {}
+        for remained_user in users:
+            nonce, cipher = self.security_service.group_ke_message(group, remained_user)
+            new_key_message[remained_user] = {'nonce': nonce, 'cipher': cipher}
+        req_data = {
             "group": group,
-            "user": user,
-        })
+            "new_key": new_key_message
+        }
+        if user != '':
+            req_data['user'] = user
+        content, response = self.send_message(self.base_url + constants.REMOVE_MEMBER_FROM_GROUP, req_data)
         if response.status_code == 200:
             return True
         else:
