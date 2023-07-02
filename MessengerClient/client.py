@@ -37,8 +37,6 @@ class Client:
                             format='%(asctime)s %(levelname)s %(name)s %(message)s')
         self.logger = logging.getLogger(__name__)
 
-        if not os.path.exists('chats'):
-            os.makedirs('chats')
         if not os.path.exists('keys'):
             os.makedirs('keys')
 
@@ -116,6 +114,9 @@ class Client:
                 'ot_prekeys': keys.ot_prekeys
             })
             self.user_keys.save_keys(self.username, self.password)
+            if not os.path.exists(f'chats/chats_{self.username}'):
+                os.makedirs(f'chats/chats_{self.username}')
+
             if response.status_code == 200:
                 return True
         else:
@@ -154,9 +155,11 @@ class Client:
             #     'ot_prekeys': keys.ot_prekeys
             # })
             self.user_keys.load_keys(self.username, self.password)
+            if not os.path.exists(f'chats/chats_{self.username}'):
+                os.makedirs(f'chats/chats_{self.username}')
             chats = self.show_chats()
             for chat in chats:
-                self.security_service.load_chat(chat, self.password)
+                self.chats[chat] = self.security_service.load_chat(chat, self.password)
 
             return True
         else:
@@ -205,7 +208,7 @@ class Client:
 
     def show_chats(self):
         chats = []
-        for file in glob.glob("chats/*.json"):
+        for file in glob.glob(f"chats/chats_{self.username}/*.json"):
             chats.append(file.split('\\')[1].split('.')[0])
         return chats
 

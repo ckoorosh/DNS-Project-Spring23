@@ -4,6 +4,8 @@ import os
 import secrets
 import time
 from typing import Tuple
+import hashlib
+import json
 
 import requests
 
@@ -15,6 +17,7 @@ from SecurityUtils.ChaCha import ChaCha20Poly1305
 from SecurityUtils.DiffieHellman import ECDiffieHellman
 from SecurityUtils.RSA import RSA
 from SecurityUtils.utils import bytes_to_b64, b64_to_bytes
+from SecurityUtils.ChaCha import ChaCha20Poly1305
 from UserKeys import UserKeys
 from utils import Singleton
 
@@ -220,16 +223,16 @@ class ClientSecurityHandler(metaclass=Singleton):
 
     def save_chat(self, username, password, messages: list[dict]):
         messages = json.dumps(messages)
-        file_key = hashlib.sha256(password.encode()).digest()  # todo: HKDF
+        file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce, cipher = chacha.encrypt(messages)
-        with open(f'chats/{username}.json', 'w') as f:
+        with open(f'chats/chats_{self.client.username}/{username}.json', 'w') as f:
             save_dict = {'nonce': bytes_to_b64(nonce), 'cipher': bytes_to_b64(cipher)}
             f.write(json.dumps(save_dict))
 
     def load_chat(self, username, password):
-        load_dict = json.load(open(f'chats/{username}.json', 'r'))
-        file_key = hashlib.sha256(password.encode()).digest()  # todo: HKDF
+        load_dict = json.load(open(f'chats/chats_{self.client.username}/{username}.json', 'r'))
+        file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce = b64_to_bytes(load_dict['nonce'])
         cipher = b64_to_bytes(load_dict['cipher'])
