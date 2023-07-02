@@ -28,9 +28,10 @@ class Client:
         self.server_port = int(os.getenv('SERVER_PORT'))
         self.base_url = f'http://{self.server_ip}:{self.server_port}'
         self.ws_url = f'ws://{self.server_ip}:{self.server_port}/ws'
-        self.security_service = ClientSecurityHandler()
+        self.security_service = ClientSecurityHandler(self)
 
         self.menu = Menu(self)
+        self.chats = {}
 
         logging.basicConfig(filename='client.log', level=logging.DEBUG,
                             format='%(asctime)s %(levelname)s %(name)s %(message)s')
@@ -38,6 +39,8 @@ class Client:
 
         if not os.path.exists('chats'):
             os.makedirs('chats')
+        if not os.path.exists('keys'):
+            os.makedirs('keys')
 
     def run(self):
         self.menu.show()
@@ -108,7 +111,7 @@ class Client:
                 'prekey_signature': keys.prekey_signature,
                 'ot_prekeys': keys.ot_prekeys
             })
-            self.user_keys.save_keys(self.password)
+            self.user_keys.save_keys(self.username, self.password)
             if response.status_code == 200:
                 return True
         else:
@@ -138,7 +141,19 @@ class Client:
         if response.status_code == 200:
             self.token = json.loads(content)['token']
             self.connect_ws()
-            self.user_keys.load_keys(self.password)
+            # self.user_keys.generate()
+            # keys = self.user_keys.get_public_keys()
+            # content, response = self.send_message(self.base_url + constants.SEND_PUBLIC_KEYS, {
+            #     'idk': keys.idk,
+            #     'signed_prekey': keys.signed_prekey,
+            #     'prekey_signature': keys.prekey_signature,
+            #     'ot_prekeys': keys.ot_prekeys
+            # })
+            self.user_keys.load_keys(self.username, self.password)
+            chats = self.show_chats()
+            for chat in chats:
+                self.security_service.load_chat(chat, self.password)
+
             return True
         else:
             return False
@@ -193,10 +208,10 @@ class Client:
             messages = self.security_service.load_chat(user, self.password)
             return True, messages
         else:
-            return False, None
+            return True, []
     
-    def save_chat(self, user, messages):
-        self.security_service.save_chat(user, self.password, messages)
+    def save_chat(self, user):
+        self.security_service.save_chat(user, self.password, self.chats[user])
 
     def create_group(self, name):
         content, response = self.send_message(self.base_url + constants.CREATE_GROUP, {

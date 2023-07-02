@@ -53,7 +53,7 @@ class UserKeys(metaclass=Singleton):
     def append_dr(self, username, dr):
         self.chat_keys[username] = dr
 
-    def save_keys(self, password):
+    def save_keys(self, username, password):
         keys = {'idk': json.dumps(self.idk, cls=ECDiffieHellmanEncoder), 
                 'signed_prekey': json.dumps(self.signed_prekey, cls=ECDiffieHellmanEncoder),
                 'ot_prekeys': [json.dumps(self.ot_prekeys[i], cls=ECDiffieHellmanEncoder) for i in range(100)],
@@ -63,12 +63,12 @@ class UserKeys(metaclass=Singleton):
         file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce, cipher = chacha.encrypt(keys)
-        with open('keys.json', 'w') as f:
+        with open(f'keys/{username}.json', 'w') as f:
             save_dict = {'nonce': bytes_to_b64(nonce), 'cipher': bytes_to_b64(cipher)}
             f.write(json.dumps(save_dict))
 
-    def load_keys(self, password):
-        load_dict = json.load(open('keys.json', 'r'))
+    def load_keys(self, username, password):
+        load_dict = json.load(open(f'keys/{username}.json', 'r'))
         file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce = b64_to_bytes(load_dict['nonce'])
