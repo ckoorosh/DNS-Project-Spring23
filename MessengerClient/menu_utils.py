@@ -4,8 +4,7 @@ from threading import Lock
 
 from utils import Singleton
 
-
-class Menu(metaclass=Singleton):
+class Menu:
     def __init__(self, client):
         self.client = client
         self.buf = []
@@ -55,7 +54,7 @@ class Menu(metaclass=Singleton):
             return
         self.add_to_buf('-- Chats --')
         for chat in chats:
-            self.add_to_buf(f'{chat["username"]}: {chat["last_message"]}')
+            self.add_to_buf(f'{chat}')
         self.add_to_buf('----------')
 
     def send_chat_message(self):

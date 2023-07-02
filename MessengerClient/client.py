@@ -1,8 +1,9 @@
 # client app using rest api to communicate with server
 import json
 import logging
-import os
 import threading
+import os
+import glob
 
 import websocket
 from dotenv import load_dotenv
@@ -34,6 +35,9 @@ class Client:
         logging.basicConfig(filename='client.log', level=logging.DEBUG,
                             format='%(asctime)s %(levelname)s %(name)s %(message)s')
         self.logger = logging.getLogger(__name__)
+
+        if not os.path.exists('chats'):
+            os.makedirs('chats')
 
     def run(self):
         self.menu.show()
@@ -178,10 +182,21 @@ class Client:
             return None
 
     def show_chats(self):
-        pass  # todo: get chats from local
+        chats = []
+        for file in glob.glob("chats/*.json"):
+            chats.append(file.split('\\')[1].split('.')[0])
+        return chats
 
     def view_chat(self, user):
-        return True, []
+        chats = self.show_chats()
+        if user in chats:
+            messages = self.security_service.load_chat(user, self.password)
+            return True, messages
+        else:
+            return False, None
+    
+    def save_chat(self, user, messages):
+        self.security_service.save_chat(user, self.password, messages)
 
     def create_group(self, name):
         content, response = self.send_message(self.base_url + constants.CREATE_GROUP, {
