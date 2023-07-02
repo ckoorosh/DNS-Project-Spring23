@@ -38,13 +38,14 @@ class SessionHandler(metaclass=Singleton):
         self.sessions[session.session_id] = session
 
     def update_session(self):
-        if self.last_update + 1000 > time.time():
-            return
-        new_sessions = {}
-        for _, session in self.sessions.items():
-            if session.expiry < time.time():
-                new_sessions[session.session_id] = session
-        self.sessions = new_sessions
+        # if self.last_update + 1000 > time.time():
+        #     return
+        # new_sessions = {}
+        # for _, session in self.sessions.items():
+        #     if session.expiry < time.time():
+        #         new_sessions[session.session_id] = session
+        # self.sessions = new_sessions
+        pass
 
     def decrypt_message(self, session_id: int, message_nonce: str, message: str):
         session = self.sessions[session_id]
