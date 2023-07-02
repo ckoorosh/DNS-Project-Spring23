@@ -67,6 +67,11 @@ class Menu:
             self.client.security_service.exchange_key(content, self.user, self.client.token, self.client.username)
 
         self.client.security_service.send_message_to_user(self.user, message, self.client.token)
+        if self.user in self.client.chats:
+            self.client.chats[self.user].append({'sender': self.client.username, 'message': message})
+        else:
+            self.client.chats[self.user] = [{'sender': self.client.username, 'message': message}]
+        self.client.save_chat(self.user)
 
         # if recipient and message:
         #     success = self.client.send_chat_message(recipient, message)

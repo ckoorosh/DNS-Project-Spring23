@@ -196,7 +196,7 @@ class ClientSecurityHandler(metaclass=Singleton):
             self.client.chats[sender].append({'sender': sender, 'message': message})
         else:
             self.client.chats[sender] = [{'sender': sender, 'message': message}]
-        print(f'\n{sender}:  {message}\n')
+        # print(f'\n{sender}:  {message}\n')
 
         self.save_chat(sender, self.client.password, self.client.chats[sender])
 
