@@ -24,12 +24,13 @@ class ClientSecurityHandler(metaclass=Singleton):
     symmetric_protocol: SymmetricSessionProtocol
     handshake_protocol: RSAWithDHProtocol
 
-    def __init__(self):
+    def __init__(self, client):
         self.session = requests.Session()
         self.server_ip = os.getenv('SERVER_IP')
         self.server_port = int(os.getenv('SERVER_PORT'))
         self.session_id = 0
         self.start_session()
+        self.client = client
 
     def start_session(self):
         resp = self.session.get(f'http://{self.server_ip}:{self.server_port}/sec/get_rsa_pub/')
@@ -191,7 +192,13 @@ class ClientSecurityHandler(metaclass=Singleton):
         dr = my_keys.chat_keys[sender]
         message = dr.received_message(sender, b64_to_bytes(context['cipher']), b64_to_bytes(context['nonce']))
         # Menu(None).add_to_buf(f'{sender}:  {message}')
-        print(f'\n{sender}:  {message}\n')
+        if sender in self.client.chats:
+            self.client.chats[sender].append({'sender': sender, 'message': message})
+        else:
+            self.client.chats[sender] = [{'sender': sender, 'message': message}]
+        # print(f'\n{sender}:  {message}\n')
+
+        self.save_chat(sender, self.client.password, self.client.chats[sender])
 
     def receive_group_key(self, context):
         my_keys = UserKeys()
