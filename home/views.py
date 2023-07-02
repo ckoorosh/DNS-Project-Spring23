@@ -204,7 +204,7 @@ def create_group(request):
         group.save()
         group_user = GroupChatUser(user=creator, group=group, role='admin')
         group_user.save()
-        return session_handler.get_http_response(session_id, "Group created.", status=201)
+        return session_handler.get_http_response(session_id, group.identifier, status=201)
 
     return session_handler.get_http_response(session_id, "Invalid group request.", status=400)
 

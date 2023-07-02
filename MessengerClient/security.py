@@ -1,5 +1,7 @@
+import hashlib
 import json
 import os
+import secrets
 import time
 from typing import Tuple
 import hashlib
@@ -11,6 +13,7 @@ from SecurityProtocols.DoubleRatchetProtocol import DoubleRatchetProtocol
 from SecurityProtocols.RSAWithDHProtocol import RSAWithDHProtocol
 from SecurityProtocols.SymmetricSessionProtocol import SymmetricSessionProtocol
 from SecurityProtocols.X3DHProtocol import TripleDHProtocol
+from SecurityUtils.ChaCha import ChaCha20Poly1305
 from SecurityUtils.DiffieHellman import ECDiffieHellman
 from SecurityUtils.RSA import RSA
 from SecurityUtils.utils import bytes_to_b64, b64_to_bytes
@@ -195,7 +198,7 @@ class ClientSecurityHandler(metaclass=Singleton):
 
     def save_chat(self, username, password, messages: list[dict]):
         messages = json.dumps(messages)
-        file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
+        file_key = hashlib.sha256(password.encode()).digest()  # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce, cipher = chacha.encrypt(messages)
         with open(f'chats/{username}.json', 'w') as f:
@@ -204,10 +207,14 @@ class ClientSecurityHandler(metaclass=Singleton):
 
     def load_chat(self, username, password):
         load_dict = json.load(open(f'chats/{username}.json', 'r'))
-        file_key = hashlib.sha256(password.encode()).digest() # todo: HKDF
+        file_key = hashlib.sha256(password.encode()).digest()  # todo: HKDF
         chacha = ChaCha20Poly1305(key=file_key)
         nonce = b64_to_bytes(load_dict['nonce'])
         cipher = b64_to_bytes(load_dict['cipher'])
         messages = chacha.decrypt(nonce, cipher)
         messages = json.loads(messages)
         return messages
+
+    def add_group(self, group_id):
+        UserKeys().add_group_key(group_id, secrets.token_bytes(32))
+

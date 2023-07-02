@@ -191,18 +191,27 @@ class Client:
         chats = self.show_chats()
         if user in chats:
             messages = self.security_service.load_chat(user, self.password)
-            return True, messages
+            return True, []
         else:
             return False, None
-    
+
     def save_chat(self, user, messages):
         self.security_service.save_chat(user, self.password, messages)
 
     def create_group(self, name):
+        if not self.security_service.does_have_key(name):
+            content, _ = self.send_message(
+                self.base_url + '/sec/user_bundle_key/',
+                {'username': name}
+            )
+            self.security_service.exchange_key(content, name, self.token)
+
+        self.security_service.group_ke_message()
         content, response = self.send_message(self.base_url + constants.CREATE_GROUP, {
             "name": name,
         })
         if response.status_code == 201:
+            self.security_service.add_group(content)
             return True
         else:
             return False
@@ -226,6 +235,7 @@ class Client:
         pass  # todo: get group chat history from local
 
     def add_member_to_group(self, group, user):
+
         content, response = self.send_message(self.base_url + constants.ADD_MEMBER_TO_GROUP, {
             "group": group,
             "user": user,
