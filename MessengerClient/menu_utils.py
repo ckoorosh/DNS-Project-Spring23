@@ -58,16 +58,15 @@ class Menu:
         self.add_to_buf('----------')
 
     def send_chat_message(self):
-        recipient = self.get_input('Enter recipient: ')
         message = self.get_input('Enter message: ')
-        if not self.client.security_service.does_have_key(recipient):
+        if not self.client.security_service.does_have_key(self.user):
             content, _ = self.client.send_message(
                 self.client.base_url + '/sec/user_bundle_key/',
-                {'username': recipient}
+                {'username': self.user}
             )
-            self.client.security_service.exchange_key(content, recipient, self.client.token, self.client.username)
+            self.client.security_service.exchange_key(content, self.user, self.client.token, self.client.username)
 
-        self.client.security_service.send_message_to_user(recipient, message, self.client.token)
+        self.client.security_service.send_message_to_user(self.user, message, self.client.token)
 
         # if recipient and message:
         #     success = self.client.send_chat_message(recipient, message)
