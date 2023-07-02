@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from SecurityUtils.ChaCha import ChaCha20Poly1305
 from SecurityUtils.DiffieHellman import ECDiffieHellman, ECDiffieHellmanEncoder, ECDiffieHellmanDecoder
 from SecurityUtils.utils import bytes_to_b64, b64_to_bytes
+from menu_utils import Menu
 
 
 class DoubleRatchetProtocol:

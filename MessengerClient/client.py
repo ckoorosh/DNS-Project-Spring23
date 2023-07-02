@@ -66,10 +66,11 @@ class Client:
         message_dict = json.loads(plain)
         real_message: str = message_dict['message']['message']
         if real_message.startswith('1'):
-            self.security_service.answer_exchange_key(real_message[1:])
+            self.security_service.answer_exchange_key(real_message[1:], self.username)
         elif real_message.startswith('2'):
-            self.security_service.receive_message(real_message[2:])
-        self.logger.info(f'Received WS message {message_dict}')
+            self.security_service.receive_message(real_message[1:])
+        ws.send(json.dumps({'type': 'pong'}))
+        # self.logger.info(f'Received WS message {message_dict}')
 
     def on_error(self, ws, error):
         self.logger.error(error)
