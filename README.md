@@ -67,7 +67,7 @@ And always, use a JWT token beside our messages and encrypt it with the client-s
 
 #### Creating Account
 For creating and logging into the account, the user has to provide his username and password.
-Upon successful account creation, the user sends his 1. public key, 2. signed pre-key, and 4. a list of one-time pre-keys to the server.
+Upon successful account creation, the user sends his 1. public key, 2. signed pre-key and its signature, and 3. a list of one-time pre-keys to the server.
 And, after logging into the account, the server responds with a token that will be used by the user in upcoming communications.
 
 #### Sending and Receiving Messages
