@@ -11,7 +11,7 @@
 
 ## About The Project
 
-This is an end-to-end encrypted console secure messenger created with the Django framework. It was developed as a project for the "Network and Data Security" course at Sharif University of Technology.
+This is an end-to-end encrypted console secure messenger created with the Django framework. It was developed as a project for the "Data and Network Security" course at Sharif University of Technology.
 Here are some of the features of this app:
 * creating account
 * showing online users
