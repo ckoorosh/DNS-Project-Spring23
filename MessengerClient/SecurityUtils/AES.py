@@ -1,7 +1,8 @@
 import os
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
 from cryptography.hazmat.primitives import padding
-from . import utils
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from SecurityUtils.utils import convert_to_bytes
 
 
 def create_aes_key():
@@ -13,7 +14,7 @@ def create_aes_iv():
 
 
 def encrypt_aes(key, iv, message):
-    message = utils.convert_to_bytes(message)
+    message = convert_to_bytes(message)
     cipher = Cipher(algorithms.AES256(key), modes.CBC(iv))
     encryptor = cipher.encryptor()
     padder = padding.PKCS7(256).padder()
@@ -23,7 +24,7 @@ def encrypt_aes(key, iv, message):
 
 
 def decrypt_aes(key, iv, encoded_message):
-    encoded_message = utils.convert_to_bytes(encoded_message)
+    encoded_message = convert_to_bytes(encoded_message)
     cipher = Cipher(algorithms.AES256(key), modes.CBC(iv))
     decryptor = cipher.decryptor()
     decrypted = decryptor.update(encoded_message) + decryptor.finalize()

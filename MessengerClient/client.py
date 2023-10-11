@@ -1,149 +1,57 @@
 # client app using rest api to communicate with server
-
-import requests
-import secrets
-import constants
-from menu_utils import Menu
-import logging
-import websocket
+import glob
+import hashlib
 import json
-import threading
-from SecurityUtils import *
+import logging
 import os
-import pickle
-import base64
+import threading
 
+import websocket
+from dotenv import load_dotenv
 
-def b64_to_bytes(string: str) -> bytes:
-    return base64.b64decode(string)
-
-
-def bytes_to_b64(bytes_data: bytes) -> str:
-    return base64.b64encode(bytes_data).decode('utf-8')
-
-
-def cipher_pub(pub):
-    return pub.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
+import constants
+from UserKeys import UserKeys
+from menu_utils import Menu
+from security import ClientSecurityHandler
 
 
 class Client:
     def __init__(self):
+        load_dotenv()
         self.token = None
         self.username = None
         self.password = None
         self.public_key = None  # load public key from file if exists
         self.private_key = None
-        self.server_nonce = None
-        self.client_nonce = None
-        self.server_ip = '127.0.0.1'
-        self.server_port = 8000
+        self.user_keys = UserKeys()
+
+        self.server_ip = os.getenv('SERVER_IP')
+        self.server_port = int(os.getenv('SERVER_PORT'))
         self.base_url = f'http://{self.server_ip}:{self.server_port}'
         self.ws_url = f'ws://{self.server_ip}:{self.server_port}/ws'
-        self.menu = Menu(self)
+        self.security_service = ClientSecurityHandler(self)
 
-        # group
-        self.group_chat_history = dict()  # saved in group_chat.txt
-        self.keys = dict()  # saved in keys.txt
-        self.temp_dh_key = b''
-        self.temp_iv = b''
+        self.menu = Menu(self)
+        self.chats = {}
+
         logging.basicConfig(filename='client.log', level=logging.DEBUG,
                             format='%(asctime)s %(levelname)s %(name)s %(message)s')
         self.logger = logging.getLogger(__name__)
 
-    def add_to_keys(self, dict_key, dict_value):
-        self.keys[dict_key] = dict_value
-        # new_iv = create_aes_iv()
-        # key_file = open('keys.txt', 'wb')
-        # key = hash_sha256(self.password)[:32]
-        # coded_keys = self.keys ####
-        # key_file.write(new_iv + encrypt_aes(key, new_iv, new_iv + coded_keys))
-        # key_file.close()
-        # print(self.keys)
-
-    def add_to_group_chat_history(self):
-        pass
-
-    # TODO: write in file and add to dict
-
-    def load_keys(self):
-        # if not os.path.exists('keys.txt'):
-        #    return
-        # key_file = open('keys.txt', 'rb')
-        # file_content = key_file.read()
-        # iv = file_content[:16]
-        # keys_ciphered = file_content[16:]
-        # decrypted = decrypt_aes(hash_sha256(self.password)[:32], iv, keys_ciphered)
-        # self.keys = decrypted ####
-        # key_file.close()
-        pass
-
-    def load_group_messages(self):
-        pass
+        if not os.path.exists('keys'):
+            os.makedirs('keys')
 
     def run(self):
         self.menu.show()
 
     def send_message(self, url, message):  # todo: encrypt message
-        # message = enc(message)
         headers = {}
         if self.token:
             headers['Authorization'] = f'Bearer {self.token}'
         self.logger.debug(f'Sending message to {url} and message {message}')
-        response = requests.post(url, data=message, headers=headers)
-        self.logger.debug(f'Received response {response.text}')
-        return response
-
-    def handshake1_handle(self, ws, message):
-        if 'type' in message and message['type'] == 'group handshake 1':
-            # print('first hand', message)
-            user = message['sender']
-            group = message['group']
-            public_key = serialization.load_pem_public_key(b64_to_bytes(message['value']))
-            params = serialization.load_pem_parameters(b64_to_bytes(message['params']))
-            private_dh = create_dh_private_key(params)
-            self.temp_dh_key = join_dh_keys(private_dh, public_key)
-            my_public_key = get_dh_public_key(private_dh)
-            iv = create_aes_iv()
-            sending_req = {
-                "destination": user,
-                "value": bytes_to_b64(cipher_pub(my_public_key)),
-                'iv': bytes_to_b64(iv),
-                "params": 'params',
-                "group": group,
-                "type": 'group handshake 2',
-            }
-            response_2 = self.send_message(self.base_url + constants.GROUP_HANDSHAKE, sending_req)
-        else:
-            return
-
-    def handshake2_handle(self, ws, message):
-        if 'type' in message and message['type'] == 'group handshake 2':
-            print('second hand', message)
-            user = message['sender']
-            group = message['group']
-            public_key = serialization.load_pem_public_key(b64_to_bytes(message['value']))
-            iv = b64_to_bytes(message['iv'])
-            self.temp_dh_key = join_dh_keys(self.temp_dh_key, public_key)
-            enciphered = encrypt_aes(self.keys[group], iv, self.keys[group])
-            sending_req = {
-                "destination": user,
-                "value": base64.b64encode(enciphered).decode('latin-1'),
-                "params": 'params',
-                "group": group,
-                'iv': 'iv',
-                "type": 'group handshake 3'
-            }
-            response_2 = self.send_message(self.base_url + constants.GROUP_HANDSHAKE, sending_req)
-
-    def handshake3_handle(self, ws, message):
-        if 'type' in message and message['type'] == 'group handshake 3':
-            print(message)
-            g_key = base64.b64decode(message['value'])
-            g_key = decrypt_aes(self.temp_dh_key, self.temp_iv, g_key)
-            print('key', g_key)
+        content, response = self.security_service.post(url, data=message, headers=headers)
+        self.logger.debug(f'Received content {content} and response {response.text}')
+        return content, response
 
     def on_message(self, ws, message):
         if type(message) == bytes:
@@ -151,12 +59,24 @@ class Client:
         data = json.loads(message)
         if 'type' in data and data['type'] == 'ping':
             ws.send(json.dumps({'type': 'pong'}))
-        else:
-            self.logger.info(f'Received WS message {message}')
+            return
 
-        self.handshake1_handle(ws, data['message']['message'])
-        self.handshake2_handle(ws, data['message']['message'])
-        self.handshake3_handle(ws, data['message']['message'])
+        if data.__contains__('byte_cipher'):
+            raise NotImplementedError()
+
+        plain = self.security_service.decrypt_str(data['nonce'], data['cipher'])
+        message_dict = json.loads(plain)
+        real_message: str = message_dict['message']['message']
+        if real_message.startswith('1'):
+            self.security_service.answer_exchange_key(real_message[1:], self.username)
+        elif real_message.startswith('2'):
+            self.security_service.receive_message(real_message[1:])
+        elif real_message.startswith('3'):
+            self.security_service.receive_group_key(real_message[1:])
+        elif real_message.startswith('4'):
+            self.security_service.receive_group_message(real_message[1:])
+        ws.send(json.dumps({'type': 'pong'}))
+        # self.logger.info(f'Received WS message {message_dict}')
 
     def on_error(self, ws, error):
         self.logger.error(error)
@@ -177,25 +97,39 @@ class Client:
         self.name = name
         self.username = username
         self.password = password
-        # todo: generate public/private key pair
-        self.public_key = secrets.token_urlsafe(16)
-        response = self.send_message(self.base_url + constants.REGISTER, {
+        content, response = self.send_message(self.base_url + constants.REGISTER, {
             "name": self.name,
             "username": self.username,
-            "password": self.password,
-            "public_key": self.public_key,
+            "password": self.password
         })
 
         if response.status_code == 201:
-            self.token = response.json()['token']
+            self.token = json.loads(content)['token']
             self.connect_ws()
-            return True
+            self.user_keys.generate()
+            keys = self.user_keys.get_public_keys()
+            content, response = self.send_message(self.base_url + constants.SEND_PUBLIC_KEYS, {
+                'idk': keys.idk,
+                'signed_prekey': keys.signed_prekey,
+                'prekey_signature': keys.prekey_signature,
+                'ot_prekeys': keys.ot_prekeys
+            })
+            self.user_keys.save_keys(self.username, self.password)
+            if not os.path.exists(f'chats/chats_{self.username}'):
+                os.makedirs(f'chats/chats_{self.username}')
+            if not os.path.exists(f'chats/chats_{self.username}/groups'):
+                os.makedirs(f'chats/chats_{self.username}/groups')
+
+            if response.status_code == 200:
+                return True
         else:
             return False
 
     def connect_ws(self):
+        nonce, token = self.security_service.encrypt_str(self.token)
+        session_id = self.security_service.session_id
         self.ws = websocket.WebSocketApp(f'{self.ws_url}/{self.username}/',
-                                         cookie=f'authCookie={self.token}',
+                                         cookie=f'authCookie={token};nonce={nonce};session={session_id}',
                                          on_message=self.on_message,
                                          on_error=self.on_error,
                                          on_close=self.on_close,
@@ -207,21 +141,40 @@ class Client:
     def login(self, username, password):
         self.username = username
         self.password = password
-        response = self.send_message(self.base_url + constants.LOGIN, {
+        content, response = self.send_message(self.base_url + constants.LOGIN, {
             "username": self.username,
-            "password": self.password,
-            "public_key": self.public_key,
+            "password": self.password
         })
 
         if response.status_code == 200:
-            self.token = response.json()['token']
+            self.token = json.loads(content)['token']
             self.connect_ws()
+            # self.user_keys.generate()
+            # keys = self.user_keys.get_public_keys()
+            # content, response = self.send_message(self.base_url + constants.SEND_PUBLIC_KEYS, {
+            #     'idk': keys.idk,
+            #     'signed_prekey': keys.signed_prekey,
+            #     'prekey_signature': keys.prekey_signature,
+            #     'ot_prekeys': keys.ot_prekeys
+            # })
+            self.user_keys.load_keys(self.username, self.password)
+            if not os.path.exists(f'chats/chats_{self.username}'):
+                os.makedirs(f'chats/chats_{self.username}')
+            if not os.path.exists(f'chats/chats_{self.username}/groups'):
+                os.makedirs(f'chats/chats_{self.username}/groups')
+            chats = self.show_chats()
+            for chat in chats:
+                self.chats[chat] = self.security_service.load_chat(chat, self.password)
+            group_chats = self.get_group_chats()
+            for chat in group_chats:
+                self.chats[chat] = self.security_service.load_group_chat(chat, self.password)
+
             return True
         else:
             return False
 
     def logout(self):
-        response = self.send_message(self.base_url + constants.LOGOUT, {})
+        content, response = self.send_message(self.base_url + constants.LOGOUT, {})
         if response.status_code == 200:
             self.token = None
             self.ws.close()
@@ -230,7 +183,7 @@ class Client:
             return False
 
     def send_chat_message(self, recipient, message):
-        response = self.send_message(self.base_url + constants.SEND_CHAT_MESSAGE, {
+        content, response = self.send_message(self.base_url + constants.SEND_CHAT_MESSAGE, {
             "recipient": recipient,
             "message": message,
         })
@@ -240,55 +193,83 @@ class Client:
             return False
 
     def send_group_chat_message(self, group, message):
-        message_packet = {
-            "group": group,
-            "message": message,
-        }
-        response = self.send_message(self.base_url + constants.SEND_GROUP_MESSAGE, message)
-        print('client', self.username, 'sent and recieved', response)
+        nonce, cipher = self.security_service.encrypt_group_message(group, message)
+
+        content, response = self.send_message(self.base_url + constants.SEND_GROUP_MESSAGE, {
+            'group': group,
+            'nonce': nonce,
+            'cipher': cipher
+        })
         if response.status_code == 200:
+            # if group in self.chats:
+            #     self.chats[group].append({'sender': self.username, 'message': message})
+            # else:
+            #     self.chats[group] = [{'sender': self.username, 'message': message}]
+            # self.save_group_chat(group)
             return True
         else:
             return False
 
     def view_online_users(self):
-        response = self.send_message(
+        content, response = self.send_message(
             self.base_url + constants.VIEW_ONLINE_USERS, {})
         if response.status_code == 200:
-            users = response.json()
+            users = json.loads(content)
             return users
         else:
             return None
 
+    def confirm_session(self, user):
+        session_key = 'session_key'  # todo: get session key from security_service
+        content = hashlib.sha256(session_key.encode()).hexdigest()[:16]
+        # print emoji from content
+
+        return content
+
     def show_chats(self):
-        pass  # todo: get chats from local
+        chats = []
+        for file in glob.glob(f"chats/chats_{self.username}/*.json"):
+            chats.append(file.split('\\')[1].split('.')[0])
+        return chats
+
+    def get_group_chats(self):
+        chats = []
+        for file in glob.glob(f"chats/chats_{self.username}/groups/*.json"):
+            chats.append(file.split('\\')[-1].split('.')[0])
+        return chats
 
     def view_chat(self, user):
-        pass
+        chats = self.show_chats()
+        if user in chats:
+            messages = self.security_service.load_chat(user, self.password)
+            return True, messages
+        else:
+            return True, []
+
+    def save_chat(self, user):
+        self.security_service.save_chat(user, self.password, self.chats[user])
+
+    def save_group_chat(self, group):
+        self.security_service.save_group_chat(group, self.password, self.chats[group])
 
     def create_group(self, name):
-
-        response = self.send_message(self.base_url + constants.CREATE_GROUP, {
+        content, response = self.send_message(self.base_url + constants.CREATE_GROUP, {
             "name": name,
         })
-        if response.status_code == 200:
-            print(response.json())
-            values = response.json()
-            group_key = create_aes_key()
-            print(values)
-            self.add_to_keys(values['group id'], group_key)
+        if response.status_code == 201:
+            self.security_service.add_group(content)
             return True
         else:
             return False
 
     def show_group_chats(self):
-        response = self.send_message(
+        content, response = self.send_message(
             self.base_url + constants.SHOW_GROUP_CHATS, {})
         if response.status_code == 200:
-            groups = response.json()
+            groups = json.loads(content)
             groups_data = []
             for group in groups:
-                group_last_message = ''
+                group_last_message = ''  # todo: get last message from local
                 groups_data.append({'name': group['name'],
                                     'id': group['id'],
                                     'last_message': group_last_message})
@@ -297,49 +278,66 @@ class Client:
             return None
 
     def view_group_chat(self, group):
-        if not group in self.group_chat_history:
-            data = {'name': group,
-                    'messages': []}  # list: (sender: message)
-            self.group_chat_history[group] = data
-        return True, self.group_chat_history[group]
+        if group in self.chats:
+            messages = self.security_service.load_group_chat(group, self.password)
+            return True, {'name': '', 'messages': messages}
+        else:
+            return True, {'name': '', 'messages': []}
 
     def add_member_to_group(self, group, user):
-        send_message = {'group': group,
-                        'user': user}
-        response = self.send_message(self.base_url + constants.ADD_MEMBER_TO_GROUP, send_message)
-        print(response)
-        if response.status_code == 200:
-            params = create_dh_params()
-            private_dh = create_dh_private_key(params)
-            self.temp_dh_key = private_dh
-            public_key = get_dh_public_key(private_dh)
-            sending_req = {
-                "destination": user,
-                'iv': 'iv',
-                "value": bytes_to_b64(cipher_pub(public_key)),
-                "params": bytes_to_b64(params.parameter_bytes(encoding=serialization.Encoding.PEM,
-                                                              format=serialization.ParameterFormat.PKCS3)),
-                "group": group,
-                "type": 'group handshake 1'
-            }
+        if not self.security_service.does_have_key(user):
+            content, _ = self.send_message(
+                self.base_url + '/sec/user_bundle_key/',
+                {'username': user}
+            )
+            self.security_service.exchange_key(content, user, self.token, self.username)
 
-            response_2 = self.send_message(self.base_url + constants.GROUP_HANDSHAKE, sending_req)
+        nonce, cipher = self.security_service.group_ke_message(group, user)
+
+        content, response = self.send_message(self.base_url + constants.ADD_MEMBER_TO_GROUP, {
+            "group": group,
+            "user": user,
+            "nonce": nonce,
+            "cipher": cipher
+        })
+        if response.status_code == 200:
             return True
         else:
             return False
 
     def remove_member_from_group(self, group, user):
-        response = self.send_message(self.base_url + constants.REMOVE_MEMBER_FROM_GROUP, {
+        content, response = self.send_message(self.base_url + '/get_members/', {'group': group})
+        if response.status_code != 200:
+            print('Something went wrong.')
+        users = json.loads(content)
+        users.remove(user)
+
+        for remained_user in users:
+            if not self.security_service.does_have_key(remained_user):
+                content, _ = self.send_message(
+                    self.base_url + '/sec/user_bundle_key/',
+                    {'username': remained_user}
+                )
+                self.security_service.exchange_key(content, remained_user, self.token, self.username)
+
+        new_key_message = {}
+        for remained_user in users:
+            nonce, cipher = self.security_service.group_ke_message(group, remained_user)
+            new_key_message[remained_user] = {'nonce': nonce, 'cipher': cipher}
+        req_data = {
             "group": group,
-            "user": user,
-        })
+            "new_key": new_key_message
+        }
+        if user != '':
+            req_data['user'] = user
+        content, response = self.send_message(self.base_url + constants.REMOVE_MEMBER_FROM_GROUP, req_data)
         if response.status_code == 200:
-            return True  # new nadshake with all members
+            return True
         else:
             return False
 
     def make_member_admin(self, group, user):
-        response = self.send_message(self.base_url + constants.MAKE_MEMBER_ADMIN, {
+        content, response = self.send_message(self.base_url + constants.MAKE_MEMBER_ADMIN, {
             "group": group,
             "user": user,
         })

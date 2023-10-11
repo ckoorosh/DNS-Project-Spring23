@@ -16,5 +16,6 @@ urlpatterns = [
     path('remove_member_from_group/', views.remove_member_from_group, name='remove_member_from_group'),
     path('make_member_admin/', views.make_member_admin, name='make_member_admin'),
     path('view_online_users/', views.view_online_users, name='view_online_users'),
-    path('group_handshake/', views.group_handshake, name='group_handshake')
+    path('send_public_keys/', views.send_public_keys, name='send_public_keys'),
+    path('get_members/', views.get_members, name='get_members')
 ]

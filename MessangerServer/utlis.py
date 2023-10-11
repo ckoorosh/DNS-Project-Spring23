@@ -1,8 +1,9 @@
+import base64
 import os
+from datetime import datetime, timezone, timedelta
 from threading import Lock
 
 import jwt
-from datetime import datetime, timezone, timedelta
 
 
 class Singleton(type):
@@ -30,3 +31,11 @@ class JwtUtil(metaclass=Singleton):
             return jwt.decode(token, self.secret, algorithms=['HS256'])
         except jwt.exceptions.ExpiredSignatureError:
             return None
+
+
+def b64_to_bytes(string: str) -> bytes:
+    return base64.b64decode(string)
+
+
+def bytes_to_b64(bytes_data: bytes) -> str:
+    return base64.b64encode(bytes_data).decode('utf-8')
