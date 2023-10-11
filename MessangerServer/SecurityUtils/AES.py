@@ -3,7 +3,6 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
 from utils import *
 
-
 def create_aes_key():
     return os.urandom(32)
 
